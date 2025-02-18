@@ -1,15 +1,15 @@
 ------------------------------------------ PROCESSING NSMIS DATA ----------------------------------------
---1. Check the public data that is there from NSMIS
+--1. Check the data that is there from NSMIS
 ----------------------------------------------------------------------------------------------------------------
 
-SELECT *
-  FROM public.nsmis_household_sanitation_reports LIMIT 100 ; 
+-- SELECT *
+--   FROM nsmis_household_sanitation_reports LIMIT 100 ; 
 
-SELECT *
-  FROM public.nsmis_health_facilities LIMIT 100 ; -- no data there yet
+-- SELECT *
+--   FROM nsmis_health_facilities LIMIT 100 ; -- no data there yet
 
-SELECT * 
-  FROM public.nsmis_report_statistics LIMIT 100 ; -- data is there  
+-- SELECT * 
+--   FROM nsmis_report_statistics LIMIT 100 ; -- data is there  
 
 --check what years data they have 
 SELECT DISTINCT reportdate 
@@ -35,7 +35,7 @@ ALTER TABLE visualization.nsmis_household_sanitation_reports_vis DROP COLUMN IF 
 -- 3. Make new variables for visualization 
 ----------------------------------------------------------------------------------------------------------------
 
-----a. Total households variable  (need to generate this a different way)
+----a. Total households variable  
 
 ALTER TABLE visualization.nsmis_household_sanitation_reports_vis 
 ADD COLUMN totalhouseholds INTEGER;
@@ -49,6 +49,13 @@ SET totalhouseholds =
     COALESCE(toilettypef, 0) + 
     COALESCE(toilettypex, 0);
     
+-- check against Anyitike's figure 2024 - April - 10,697,739 households denominator;  
+SELECT SUM(totalhouseholds) AS total_households_sum
+FROM visualization.nsmis_household_sanitation_reports_vis
+WHERE reportdate = '2024-03-31'; -- my figure 10,617,924
+
+
+
 ----b. Number of improved facilities (types b-e)
 
 ALTER TABLE visualization.nsmis_household_sanitation_reports_vis 
@@ -60,7 +67,13 @@ SET improved_count_hhs =
     COALESCE(toilettyped, 0) + 
     COALESCE(toilettypee, 0);
     
------c. % of improved facilities (types a-e)
+-- Anyitike's check 8,260,061 households were improved - rate of 77.2%
+SELECT SUM(improved_count_hhs) AS improved_households_sum
+FROM visualization.nsmis_household_sanitation_reports_vis
+WHERE reportdate = '2024-03-31'; -- my figure 8,273,582
+
+
+-----c. % of improved facilities (types b-e)
 
 ALTER TABLE visualization.nsmis_household_sanitation_reports_vis 
 ADD COLUMN improved_perc_hhs NUMERIC;
@@ -165,7 +178,7 @@ SELECT *
   FROM visualization.nsmis_household_sanitation_reports_vis LIMIT 1000; 
 
 -- check how many rows in the table 
-SELECT COUNT(*) FROM visualization.nsmis_household_sanitation_reports_vis;
+SELECT COUNT(*) FROM visualization.nsmis_household_sanitation_reports_vis; --204351 records
 
 ---------------------------------------------------------------------------------------------------------------------
 -- make a summary table by LGA 
