@@ -1,19 +1,20 @@
 ------------------------------------------ PROCESSING NSMIS DATA ----------------------------------------
---1. Check the data that is there from NSMIS
+--1. Check the public data that is there from NSMIS
 ----------------------------------------------------------------------------------------------------------------
 
 SELECT *
-  FROM nsmis_household_sanitation_reports LIMIT 100 ; 
+  FROM public.nsmis_household_sanitation_reports LIMIT 100 ; 
 
 SELECT *
-  FROM nsmis_health_facilities LIMIT 100 ; -- no data there yet
+  FROM public.nsmis_health_facilities LIMIT 100 ; -- no data there yet
 
 SELECT * 
-  FROM nsmis_report_statistics LIMIT 100 ; -- data is there  
+  FROM public.nsmis_report_statistics LIMIT 100 ; -- data is there  
 
 --check what years data they have 
 SELECT DISTINCT reportdate 
-  FROM nsmis_household_sanitation_reports_vis  -- we have from 2022 - 2024
+  FROM public.nsmis_household_sanitation_reports
+  ORDER BY reportdate LIMIT 100 ;  -- we have from 2022 - 2024
 
 ----------------------------------------------------------------------------------------------------------------
 -- 2. copy the raw input table and create a preprocessed version suitable for visualization
@@ -38,7 +39,7 @@ ALTER TABLE visualization.nsmis_household_sanitation_reports_vis DROP COLUMN IF 
 
 ALTER TABLE visualization.nsmis_household_sanitation_reports_vis 
 ADD COLUMN totalhouseholds INTEGER;
-UPDATE nsmis_household_sanitation_reports_vis 
+UPDATE visualization.nsmis_household_sanitation_reports_vis 
 SET totalhouseholds = 
     COALESCE(toilettypea, 0) + 
     COALESCE(toilettypeb, 0) + 
@@ -48,13 +49,12 @@ SET totalhouseholds =
     COALESCE(toilettypef, 0) + 
     COALESCE(toilettypex, 0);
     
-----b. Number of improved facilities (types a-e)
+----b. Number of improved facilities (types b-e)
 
-ALTER TABLE nsmis_household_sanitation_reports_vis 
+ALTER TABLE visualization.nsmis_household_sanitation_reports_vis 
 ADD COLUMN improved_count_hhs INTEGER;
-UPDATE nsmis_household_sanitation_reports_vis 
+UPDATE visualization.nsmis_household_sanitation_reports_vis 
 SET improved_count_hhs = 
-    COALESCE(toilettypea, 0) + 
     COALESCE(toilettypeb, 0) + 
     COALESCE(toilettypec, 0) + 
     COALESCE(toilettyped, 0) + 
@@ -62,29 +62,28 @@ SET improved_count_hhs =
     
 -----c. % of improved facilities (types a-e)
 
-ALTER TABLE nsmis_household_sanitation_reports_vis 
+ALTER TABLE visualization.nsmis_household_sanitation_reports_vis 
 ADD COLUMN improved_perc_hhs NUMERIC;
-UPDATE nsmis_household_sanitation_reports_vis 
-  SET improved_perc_hhs = improved_count_hhs::DOUBLE PRECISION / NULLIF(totalhouseholds, 0);    
-  --ALTER COLUMN improved_perc_hhs TYPE NUMERIC(10,2) 
-  --USING ROUND(improved_perc_hhs::NUMERIC, 2);
 
+UPDATE visualization.nsmis_household_sanitation_reports_vis 
+  SET improved_perc_hhs = improved_count_hhs::DOUBLE PRECISION / NULLIF(totalhouseholds, 0);    
+  
 SELECT *
 FROM public.ruwasa_regions
-LIMIT 100 -- nsmisregioncode
+LIMIT 100 ; -- nsmisregioncode
 -- join with the region and LGA keys so that they can have names on visualizations 
 
 --- d. % with handwashingstation
-ALTER TABLE nsmis_household_sanitation_reports_vis 
+ALTER TABLE visualization.nsmis_household_sanitation_reports_vis 
 ADD COLUMN handwashstation_perc_hhs NUMERIC;
-UPDATE nsmis_household_sanitation_reports_vis 
-  SET handwashstation_perc_hhs = handwashstation_perc_hhs::DOUBLE PRECISION / NULLIF(totalhouseholds, 0);    
+UPDATE visualization.nsmis_household_sanitation_reports_vis 
+  SET handwashstation_perc_hhs = handwashingstation::DOUBLE PRECISION / NULLIF(totalhouseholds, 0);    
 
 
 --- e. % with hwfsoapwater
-ALTER TABLE nsmis_household_sanitation_reports_vis 
+ALTER TABLE visualization.nsmis_household_sanitation_reports_vis 
 ADD COLUMN handwashsoap_perc_hhs NUMERIC;
-UPDATE nsmis_household_sanitation_reports_vis 
+UPDATE visualization.nsmis_household_sanitation_reports_vis 
   SET handwashsoap_perc_hhs = hwfsoapwater::DOUBLE PRECISION / NULLIF(totalhouseholds, 0);    
 
 
@@ -96,7 +95,7 @@ ALTER TABLE visualization.nsmis_household_sanitation_reports_vis
   
 UPDATE visualization.nsmis_household_sanitation_reports_vis AS target
 SET region_name = source.name
-FROM ruwasa_regions AS source
+FROM public.ruwasa_regions AS source
 WHERE target.regioncode = source.nsmisregioncode;
 
 
@@ -107,7 +106,7 @@ ALTER TABLE visualization.nsmis_household_sanitation_reports_vis
 
 UPDATE visualization.nsmis_household_sanitation_reports_vis AS target
 SET lga_name = source.lganame
-FROM ruwasa_lgas AS source
+FROM public.ruwasa_lgas AS source
 WHERE target.lgacode = source.nsmislgacode;
 
 -- join the json shape file features 
@@ -117,12 +116,13 @@ ALTER TABLE visualization.nsmis_household_sanitation_reports_vis
   
 UPDATE visualization.nsmis_household_sanitation_reports_vis AS target
 SET geojson = source.geojson
-FROM tz_lgas AS source
+FROM public.tz_lgas AS source
 WHERE target."lga_name" = source."Authority";
 
 --  f. reorder the columns and save table to visualization schema
-CREATE SCHEMA visualization
-CREATE TABLE visualization.nsmis_household_sanitation_reports_vis AS
+DROP TABLE IF EXISTS visualization.nsmis_household_sanitation_reports_v;
+
+CREATE TABLE visualization.nsmis_household_sanitation_reports_v AS
 SELECT
     sysid,
     reportdate,
@@ -151,21 +151,74 @@ SELECT
     handwashsoap_perc_hhs,
     geojson
     
-FROM visualization.nsmis_household_sanitation_reports_vis;
+  FROM visualization.nsmis_household_sanitation_reports_vis;
 
-drop visualization.nsmis_household_sanitation_reports_vis;
+drop TABLE  visualization.nsmis_household_sanitation_reports_vis;
 
---- g. Make a collapsed table to just check that the figures are the same on coverage
-
-
+ALTER TABLE visualization.nsmis_household_sanitation_reports_v RENAME TO nsmis_household_sanitation_reports_vis;
 
 -- look at resulting table 
+--SELECT *
+  --FROM visualization.nsmis_household_sanitation_reports_v LIMIT 1000; 
 
 SELECT *
   FROM visualization.nsmis_household_sanitation_reports_vis LIMIT 1000; 
 
 -- check how many rows in the table 
-SELECT COUNT(*) FROM nsmis_household_sanitation_reports_vis;
+SELECT COUNT(*) FROM visualization.nsmis_household_sanitation_reports_vis;
 
+---------------------------------------------------------------------------------------------------------------------
+-- make a summary table by LGA 
+DROP TABLE IF EXISTS visualization.nsmis_household_sanitation_reports_lga;
 
+CREATE TABLE visualization.nsmis_household_sanitation_reports_lga AS
+WITH ranked_data AS (
+    SELECT DISTINCT ON (lgacode, lga_name, reportdate) 
+        lgacode,
+        lga_name,
+        reportdate,
+        regioncode,
+        region_name,
+        geojson
+    FROM visualization.nsmis_household_sanitation_reports_vis
+    ORDER BY lgacode, lga_name, reportdate, createdat
+)
+
+SELECT 
+    r.lgacode,
+    r.lga_name,
+    r.reportdate,
+    r.regioncode,
+    r.region_name,
+    r.geojson,
+    
+    -- Averages of required percentage variables
+    AVG(v.improved_perc_hhs) AS avg_improved_perc_hhs,
+    AVG(v.handwashstation_perc_hhs) AS avg_handwashstation_perc_hhs,
+    AVG(v.handwashsoap_perc_hhs) AS avg_handwashsoap_perc_hhs
+
+FROM ranked_data r
+JOIN visualization.nsmis_household_sanitation_reports_vis v
+ON r.lgacode = v.lgacode 
+AND r.lga_name = v.lga_name 
+AND r.reportdate = v.reportdate 
+
+GROUP BY r.lgacode, r.lga_name, r.reportdate, r.regioncode, r.region_name, r.geojson;
+
+DROP TABLE IF EXISTS visualization.nsmis_household_sanitation_lga;
+
+CREATE TABLE visualization.nsmis_household_sanitation_lga AS
+SELECT
+  regioncode,
+  region_name,
+  lgacode,
+  lga_name,
+  reportdate,
+  avg_improved_perc_hhs,
+  avg_handwashsoap_perc_hhs,
+  avg_handwashstation_perc_hhs
+
+  FROM visualization.nsmis_household_sanitation_reports_lga;
   
+DROP TABLE visualization.nsmis_household_sanitation_reports_lga;
+SELECT * from visualization.nsmis_household_sanitation_lga
