@@ -36,19 +36,52 @@ BEGIN
         vis_schema, vis_table_name);
 
     --------------------------------------------------------------------------
-    -- Step 3: Compute Sanitation Statistics in the Intermediate Table
+    -- Step 3a: Compute Total Households
     --------------------------------------------------------------------------
     EXECUTE format('
         UPDATE %I.%I 
-        SET totalhouseholds = COALESCE(toilettypea, 0) + COALESCE(toilettypeb, 0) + 
-                              COALESCE(toilettypec, 0) + COALESCE(toilettyped, 0) + 
-                              COALESCE(toilettypee, 0) + COALESCE(toilettypef, 0) + 
-                              COALESCE(toilettypex, 0),
-            improved_count_hhs = COALESCE(toilettypeb, 0) + COALESCE(toilettypec, 0) + 
-                                 COALESCE(toilettyped, 0) + COALESCE(toilettypee, 0),
-            improved_perc_hhs = NULLIF(improved_count_hhs::DOUBLE PRECISION, 0) / NULLIF(totalhouseholds, 0),
-            handwashstation_perc_hhs = NULLIF(handwashingstation::DOUBLE PRECISION, 0) / NULLIF(totalhouseholds, 0),
-            handwashsoap_perc_hhs = NULLIF(hwfsoapwater::DOUBLE PRECISION, 0) / NULLIF(totalhouseholds, 0)',
+        SET totalhouseholds = COALESCE(toilettypea, 0) + 
+                              COALESCE(toilettypeb, 0) + 
+                              COALESCE(toilettypec, 0) + 
+                              COALESCE(toilettyped, 0) + 
+                              COALESCE(toilettypee, 0) + 
+                              COALESCE(toilettypef, 0) + 
+                              COALESCE(toilettypex, 0)',
+        vis_schema, vis_table_name);
+
+    --------------------------------------------------------------------------
+    -- Step 3b: Compute Improved Facilities Count (types b-e)
+    --------------------------------------------------------------------------
+    EXECUTE format('
+        UPDATE %I.%I 
+        SET improved_count_hhs = COALESCE(toilettypeb, 0) + 
+                                 COALESCE(toilettypec, 0) + 
+                                 COALESCE(toilettyped, 0) + 
+                                 COALESCE(toilettypee, 0)',
+        vis_schema, vis_table_name);
+
+    --------------------------------------------------------------------------
+    -- Step 3c: Compute % of Improved Facilities
+    --------------------------------------------------------------------------
+    EXECUTE format('
+        UPDATE %I.%I 
+        SET improved_perc_hhs = improved_count_hhs::DOUBLE PRECISION / NULLIF(totalhouseholds, 0)',
+        vis_schema, vis_table_name);
+
+    --------------------------------------------------------------------------
+    -- Step 3d: Compute % with Handwashing Station
+    --------------------------------------------------------------------------
+    EXECUTE format('
+        UPDATE %I.%I 
+        SET handwashstation_perc_hhs = handwashingstation::DOUBLE PRECISION / NULLIF(totalhouseholds, 0)',
+        vis_schema, vis_table_name);
+
+    --------------------------------------------------------------------------
+    -- Step 3e: Compute % with Handwash Soap/Water
+    --------------------------------------------------------------------------
+    EXECUTE format('
+        UPDATE %I.%I 
+        SET handwashsoap_perc_hhs = hwfsoapwater::DOUBLE PRECISION / NULLIF(totalhouseholds, 0)',
         vis_schema, vis_table_name);
 
     --------------------------------------------------------------------------
@@ -67,8 +100,6 @@ BEGIN
         FROM public.ruwasa_lgas AS source
         WHERE target.lgacode = source.nsmislgacode',
         vis_schema, vis_table_name);
-        
-
 
     --------------------------------------------------------------------------
     -- Step 5: Attach GeoJSON Data for Spatial Analysis
@@ -91,7 +122,7 @@ BEGIN
                toilettypea, toilettypeb, toilettypec, toilettyped, toilettypee, 
                toilettypef, toilettypex, handwashingstation, hwfsoapwater, 
                createdat, totalhouseholds, improved_count_hhs, improved_perc_hhs, 
-               handwashstation_perc_hhs, handwashsoap_perc_hhs
+               handwashstation_perc_hhs, handwashsoap_perc_hhs, geojson
         FROM %I.%I',
         vis_schema, final_vis_name, vis_schema, vis_table_name);
 
@@ -100,7 +131,7 @@ BEGIN
 
     --------------------------------------------------------------------------
     -- Step 7: Create Intermediate LGA Summary Table (for aggregation)
-    -- Now reference the final visualization table using its schema-qualified name.
+    -- Reference final visualization table with schema-qualified name.
     --------------------------------------------------------------------------
     EXECUTE format('DROP TABLE IF EXISTS %I.%I', vis_schema, lga_summary_name);
     EXECUTE format('
