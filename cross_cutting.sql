@@ -32,5 +32,8 @@ GROUP BY
     n.regioncode,
     n.region_name;
 
+ALTER TABLE visualization.cross_cutting_wash_data_vis
+RENAME COLUMN district TO district_name;
+
 SELECT * FROM visualization.cross_cutting_wash_data_vis LIMIT 200;
 
