@@ -8,21 +8,16 @@ select * FROM public.bemis_school_enrollment LIMIT 10;
 select * FROM public.bemis_school_reports LIMIT 10;
 select * FROM public.bemis_report_statistics LIMIT 10;
 
-
--- -- first drop the test schools 
--- select * FROM visualization.bemis_school_comb_vis where region_code='sJ3VX9rfhlb'
-
-
 select count(*) FROM public.bemis_school_services ; 
--- 26,582 schools
+-- 26,971 schools
 select count(*) FROM public.bemis_school_infrastructure ;
 -- 27,030 schools 
 select count(*) FROM public.bemis_school_reports ; 
 -- 27,370 schools 
 select count(*) FROM public.bemis_report_statistics  ; 
--- 184 schools 
+-- 184 lgas 
 select count(*) FROM public.bemis_school_enrollment  ; 
--- 6487 schools 
+-- 25,144 schools 
 
  
 
@@ -178,16 +173,16 @@ SELECT count(*) from visualization.bemis_school_comb_vis
 ALTER TABLE visualization.bemis_school_comb_vis  
   ADD COLUMN total_pupils VARCHAR,
   ADD COLUMN girl_pupils VARCHAR(255),
-  ADD COLUMN boy_pupils VARCHAR,
+  ADD COLUMN boy_pupils VARCHAR;
 
   
-UPDATE visualization.bemis_school_comb_vis  AS sch
-  SET 
-    total_pupils = e.totalpupils,
-    girl_pupils = e.girl_pupils,
-    boy_pupils = e.boy_pupils,
-  FROM public.bemis_school_enrollment  AS e
-  WHERE sch.schoolregnumber = e.schoolregnumber ;
+UPDATE visualization.bemis_school_comb_vis AS sch
+SET 
+  total_pupils = e.totalpupils::NUMERIC,
+  girl_pupils = e.totalgirls::NUMERIC,
+  boy_pupils = e.totalboys::NUMERIC
+  FROM public.bemis_school_enrollment AS e
+WHERE sch.schoolregnumber = e.schoolregnumber;
   
 SELECT * from visualization.bemis_school_comb_vis LIMIT 100; 
 
@@ -227,6 +222,7 @@ SELECT COUNT(*) AS null_count
 FROM visualization.bemis_school_comb_vis 
 WHERE watersource IS NULL;
 -- 603 schools (likely same as those missing from infrastructure)
+
 UPDATE visualization.bemis_school_comb_vis
 SET improved_water_source = 
     CASE 
@@ -257,6 +253,7 @@ SET improved_water_source =
             ELSE NULL 
     END;    
 
+
 -- check distribution 
 SELECT 
     improved_water_source, 
@@ -265,6 +262,8 @@ SELECT
 FROM visualization.bemis_school_comb_vis
 GROUP BY improved_water_source
 ORDER BY count DESC;
+
+-- there are some nulls but they correspond to where there is infrastructure data and no service data.
 
 -- check remaining uncoded sources
 WITH total AS (
@@ -285,6 +284,7 @@ ORDER BY count DESC;
 --- Improved toilet classification part (a) Facility type 
 --- includes: flush/pour flush toilets connected to piped sewer systems, septic tanks or pit latrines; pit latrines with slabs (including ventilated pit latrines), and composting toilets. 
 
+
 ALTER TABLE visualization.bemis_school_comb_vis 
     ADD COLUMN improved_toilet_type BOOLEAN;
 
@@ -301,7 +301,8 @@ UPDATE visualization.bemis_school_comb_vis
     OR toilettypepitlatrinewithfloor = TRUE 
     OR toilettypeopenpitlatrine = TRUE  
     OR toilettypeothers = TRUE;
-
+    
+  
 -- check stats 
 SELECT 
     improved_toilet_type, 
@@ -310,12 +311,12 @@ SELECT
 FROM visualization.bemis_school_comb_vis
 GROUP BY bemis_school_comb_vis.improved_toilet_type
 ORDER BY count DESC;
-
 ----------------------------------------------------------------------------------------------------------------------
 -- part (b) -- Provide one drop hole per 40 girls, one drop hole per 50 boys and one drop hole suitable for disabled pupils.
 -- In schools with an enrolment above 1,500 students, a student to drop hole ratio of one drop hole per 50 girls and one drop hole per 65 for boys can be accepted.
 
 ALTER TABLE visualization.bemis_school_comb_vis
+
 ADD COLUMN girls_per_drophole NUMERIC,
     ADD COLUMN boys_per_drophole NUMERIC,
     ADD COLUMN enrollment_over1500 BOOLEAN,
@@ -325,51 +326,64 @@ ADD COLUMN girls_per_drophole NUMERIC,
 
 UPDATE visualization.bemis_school_comb_vis 
 SET 
-    girls_per_drophole = CASE WHEN dropholesgirls = 0 THEN NULL ELSE girl_pupils / dropholesgirls END,
-    boys_per_drophole = CASE WHEN dropholesboys = 0 THEN NULL ELSE boy_pupils / dropholesboys END,
-    drophole_specialneeds = CASE WHEN dropholesspecialneedsboys > 0 OR dropholesspecialneedsgirls > 0 
-                            THEN TRUE ELSE drophole_specialneeds END,
-    enrollment_over1500 = CASE WHEN totalpupils >= 1500 AND totalpupils IS NOT NULL THEN TRUE 
-                               WHEN totalpupils < 1500 AND totalpupils IS NOT NULL THEN FALSE 
-                               ELSE NULL END,
-    meet_drophole_ratio = CASE 
-                            WHEN girls_per_drophole <= 40 AND boys_per_drophole <= 50 AND drophole_specialneeds = TRUE AND enrollment_over1500 = FALSE 
-                            THEN TRUE
-                            WHEN girls_per_drophole <= 50 AND boys_per_drophole <= 65 AND drophole_specialneeds = TRUE AND enrollment_over1500 = TRUE 
-                            THEN TRUE
-                            ELSE FALSE END;
-
+  girls_per_drophole = CASE 
+    WHEN girl_pupils = 0 THEN NULL 
+    ELSE girl_pupils / dropholesgirls 
+  END,
+  -- shouldn't count drophole ratio when single sex school (girls)
+  boys_per_drophole = CASE 
+    WHEN girl_pupils = 0 THEN NULL 
+    ELSE boy_pupils / dropholesboys 
+  END,
+  -- shouldn't count drophole ratio when single sex school (boys)
+  drophole_specialneeds = CASE 
+    WHEN dropholesspecialneedsboys > 0 OR dropholesspecialneedsgirls > 0 THEN TRUE 
+    ELSE drophole_specialneeds 
+  END,
+  -- still count special needs facilities because they could come any time
+  enrollment_over1500 = CASE 
+    WHEN total_pupils >= 1500 AND total_pupils IS NOT NULL THEN TRUE 
+    WHEN total_pupils < 1500 AND total_pupils IS NOT NULL THEN FALSE 
+    ELSE enrollment_over1500
+  END,
+  -- don't count when data on total pupils is missing 
+  meet_drophole_ratio = CASE 
+    WHEN girls_per_drophole <= 40 AND boys_per_drophole <= 50 
+         AND drophole_specialneeds = TRUE AND enrollment_over1500 = FALSE 
+      THEN TRUE 
+    WHEN girls_per_drophole <= 50 AND boys_per_drophole <= 65 
+         AND drophole_specialneeds = TRUE AND enrollment_over1500 = TRUE 
+      THEN TRUE 
+    ELSE FALSE 
+  END;
 ----------------------------------------------------------------------------------------------------------------------
 -- part (c) -- There are separate latrine blocks for girls and boys and a segregated block of latrines for teachers.
 -- no variable for separate blocks but there is one for teachers 
 
 ALTER TABLE visualization.bemis_school_comb_vis
-ADD COLUMN separate_latrines_teachers BOOLEAN;
+ADD COLUMN separate_latrines_teachers BOOLEAN
 
 UPDATE visualization.bemis_school_comb_vis
 SET separate_latrines_teachers = 
     CASE 
-        WHEN dropholesmaleteachers > 0 AND dropholesfemaleteachers > 0 
-        AND dropholesmaleteachers IS NOT NULL AND dropholesfemaleteachers IS NOT NULL 
+        WHEN dropholesmaleteachers > 0 
+             AND dropholesfemaleteachers > 0
+             AND dropholesmaleteachers IS NOT NULL 
+             AND dropholesfemaleteachers IS NOT NULL 
         THEN TRUE
-        WHEN dropholesmaleteachers IS NULL AND dropholesfemaleteachers IS NULL
+        WHEN dropholesmaleteachers IS NULL 
+             AND dropholesfemaleteachers IS NULL
         THEN NULL 
+        -- Both are NULL, keep it NULL
         ELSE FALSE 
+        -- Otherwise set to FALSE
     END;
 
-----------------------------------------------------------------------------------------------------------------------
--- part (d) create improved sanitation coverage variable on the basis of all these conditions 
-ALTER TABLE visualization.bemis_school_comb_vis 
-    ADD COLUMN improved_school_sanitation BOOLEAN;
 
-UPDATE visualization.bemis_school_comb_vis
-  SET improved_school_sanitation =
-    CASE  
-      WHEN improved_school_sanitation = TRUE 
-      AND meet_drophole_ratio = TRUE
-      THEN TRUE 
-      ELSE FALSE 
-    END;
+
+
+-- now drop the test schools 
+select * FROM visualization.bemis_school_comb_vis where region_code='sJ3VX9rfhlb'
 
 --- checking where there are no toilet types specified in this question - output this list and send it to Shaban 
 SELECT 
@@ -396,14 +410,7 @@ WHERE
 
 SELECT COUNT(schoolregnumber) AS count
 FROM visualization.bemis_school_comb_vis
-WHERE toilettypeftconnmainsewerline IS FALSE
-    AND toilettypeftconnseptictank IS FALSE
-    AND toilettypeftconnpit IS FALSE
-    AND toilettypeftconnanotherloc IS FALSE
-    AND toilettypevippitlatrine IS FALSE
-    AND toilettypepitlatrinewithfloor IS FALSE
-    AND toilettypeopenpitlatrine IS FALSE
-    AND toilettypeothers IS FALSE;
+WHERE  IS NULL;
 -- coding worked correctly so a lot of data is missing 
 
 
