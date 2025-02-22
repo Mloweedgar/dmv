@@ -6,13 +6,13 @@ BEGIN
     --------------------------------------------------------------------------
     -- Step 1: Drop Existing Combined Table if It Exists
     --------------------------------------------------------------------------
-    EXECUTE 'DROP TABLE IF EXISTS visualization.bemis_school_comb_vis_test';
+    EXECUTE 'DROP TABLE IF EXISTS visualization.bemis_school_comb_vis';
 
     --------------------------------------------------------------------------
     -- Step 2: Create the Combined Table with All Required Columns
     --------------------------------------------------------------------------
     EXECUTE '
-    CREATE TABLE visualization.bemis_school_comb_vis_test (
+    CREATE TABLE visualization.bemis_school_comb_vis (
         schoolregnumber VARCHAR PRIMARY KEY,
         watersource     VARCHAR,
         region_code     VARCHAR,
@@ -63,7 +63,7 @@ BEGIN
     -- Step 3: Insert Base Data from bemis_school_services into the Combined Table
     --------------------------------------------------------------------------
     EXECUTE '
-    INSERT INTO visualization.bemis_school_comb_vis_test (schoolregnumber, watersource)
+    INSERT INTO visualization.bemis_school_comb_vis (schoolregnumber, watersource)
     SELECT schoolregnumber, watersource
     FROM public.bemis_school_services
     ';
@@ -72,7 +72,7 @@ BEGIN
     -- Step 4: Update Region Codes, GPS Coordinates, and Program Flag from bemis_school_reports
     --------------------------------------------------------------------------
     EXECUTE '
-    UPDATE visualization.bemis_school_comb_vis_test AS sch
+    UPDATE visualization.bemis_school_comb_vis AS sch
     SET 
       region_code = r.regioncode,
       lga_code = r.lgacode,
@@ -86,7 +86,7 @@ BEGIN
     -- Step 5: Update Region and LGA Names Using the Lookup Table (region_district_lga_names)
     --------------------------------------------------------------------------
     EXECUTE '
-    UPDATE visualization.bemis_school_comb_vis_test AS sch
+    UPDATE visualization.bemis_school_comb_vis AS sch
     SET 
       region_name = n.region_name,
       lga_name = n.lga_name
@@ -98,7 +98,7 @@ BEGIN
     -- Step 6: Update Infrastructure Details from bemis_school_infrastructure
     --------------------------------------------------------------------------
     EXECUTE '
-    UPDATE visualization.bemis_school_comb_vis_test AS bscv
+    UPDATE visualization.bemis_school_comb_vis AS bscv
     SET 
       classroomcount = bsi.classroomcount,
       classroomsrequired = bsi.classroomsrequired,
@@ -137,7 +137,7 @@ BEGIN
     --------------------------------------------------------------------------
     -- 7a. Update school category based on registration number prefix.
     EXECUTE '
-    UPDATE visualization.bemis_school_comb_vis_test
+    UPDATE visualization.bemis_school_comb_vis
     SET school_category = 
         CASE 
             WHEN SPLIT_PART(schoolregnumber, ''.'', 1) IN (''EM'', ''ES'') THEN ''Primary/Pre-Primary''
@@ -148,7 +148,7 @@ BEGIN
 
     -- 7b. Categorize improved water source based on text patterns in the watersource.
     EXECUTE '
-    UPDATE visualization.bemis_school_comb_vis_test
+    UPDATE visualization.bemis_school_comb_vis
     SET improved_water_source = 
         CASE 
           WHEN watersource ILIKE ''%default%'' 
@@ -169,7 +169,7 @@ BEGIN
 
     -- 7c. Set improved toilet type based on infrastructure flags.
     EXECUTE '
-    UPDATE visualization.bemis_school_comb_vis_test 
+    UPDATE visualization.bemis_school_comb_vis 
       SET improved_toilet_type = TRUE 
       WHERE toilettypeftconnmainsewerline = TRUE
          OR toilettypeftconnseptictank = TRUE 
@@ -178,7 +178,7 @@ BEGIN
     ';
     
     EXECUTE '
-    UPDATE visualization.bemis_school_comb_vis_test 
+    UPDATE visualization.bemis_school_comb_vis 
       SET improved_toilet_type = FALSE 
       WHERE toilettypeftconnanotherloc = TRUE
          OR toilettypepitlatrinewithfloor = TRUE 
@@ -190,7 +190,7 @@ BEGIN
     -- Step 8: Final Adjustments – Set Default Values for Nulls and Update Derived Flags
     --------------------------------------------------------------------------
     EXECUTE '
-    UPDATE visualization.bemis_school_comb_vis_test
+    UPDATE visualization.bemis_school_comb_vis
     SET latrineslockable = TRUE
     WHERE latrinesmaintained = TRUE 
        OR specialgirlsroom = TRUE 
@@ -198,7 +198,7 @@ BEGIN
     ';
 
     EXECUTE '
-    UPDATE visualization.bemis_school_comb_vis_test
+    UPDATE visualization.bemis_school_comb_vis
     SET 
         latrineslockable = COALESCE(latrineslockable, FALSE),
         specialgirlsroom = COALESCE(specialgirlsroom, FALSE),
