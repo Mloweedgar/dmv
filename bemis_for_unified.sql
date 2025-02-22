@@ -167,13 +167,13 @@ SET
   WHERE bscv.schoolregnumber = bsi.schoolregnumber;
 
 SELECT count(*) from visualization.bemis_school_comb_vis 
--- 26,582 in both 
+-- 26,941 in both 
 ----------------------------------------------------------------------------------------------------------------------
 -- add the number of pupils from the enrollment TABLE
 ALTER TABLE visualization.bemis_school_comb_vis  
-  ADD COLUMN total_pupils VARCHAR,
-  ADD COLUMN girl_pupils VARCHAR(255),
-  ADD COLUMN boy_pupils VARCHAR;
+  ADD COLUMN total_pupils NUMERIC,
+  ADD COLUMN girl_pupils NUMERIC (255),
+  ADD COLUMN boy_pupils NUMERIC;
 
   
 UPDATE visualization.bemis_school_comb_vis AS sch
@@ -263,7 +263,7 @@ FROM visualization.bemis_school_comb_vis
 GROUP BY improved_water_source
 ORDER BY count DESC;
 
--- there are some nulls but they correspond to where there is infrastructure data and no service data.
+-- there are some nulls but they correspond to where there is infrastructure data and no service data - 582 schools.
 
 -- check remaining uncoded sources
 WITH total AS (
@@ -316,7 +316,6 @@ ORDER BY count DESC;
 -- In schools with an enrolment above 1,500 students, a student to drop hole ratio of one drop hole per 50 girls and one drop hole per 65 for boys can be accepted.
 
 ALTER TABLE visualization.bemis_school_comb_vis
-
 ADD COLUMN girls_per_drophole NUMERIC,
     ADD COLUMN boys_per_drophole NUMERIC,
     ADD COLUMN enrollment_over1500 BOOLEAN,
@@ -324,29 +323,41 @@ ADD COLUMN girls_per_drophole NUMERIC,
     ADD COLUMN teacher_toilet_block BOOLEAN,
     ADD COLUMN drophole_specialneeds BOOLEAN;
 
+ALTER TABLE visualization.bemis_school_comb_vis
+ADD COLUMN girls_per_drophole NUMERIC,
+    ADD COLUMN boys_per_drophole NUMERIC,
+    ADD COLUMN enrollment_over1500 BOOLEAN,
+    ADD COLUMN meet_drophole_ratio BOOLEAN,
+    ADD COLUMN teacher_toilet_block BOOLEAN,
+    ADD COLUMN drophole_specialneeds BOOLEAN;
+
+-- Update pupil-per-drophole calculations & other direct conditions
 UPDATE visualization.bemis_school_comb_vis 
 SET 
   girls_per_drophole = CASE 
-    WHEN girl_pupils = 0 THEN NULL 
-    ELSE girl_pupils / dropholesgirls 
+    WHEN dropholesgirls IS NULL OR dropholesgirls = 0 THEN NULL  
+    ELSE girl_pupils::NUMERIC / dropholesgirls 
   END,
-  -- shouldn't count drophole ratio when single sex school (girls)
+  
   boys_per_drophole = CASE 
-    WHEN girl_pupils = 0 THEN NULL 
-    ELSE boy_pupils / dropholesboys 
+    WHEN dropholesboys IS NULL OR dropholesboys = 0 THEN NULL  
+    ELSE boy_pupils::NUMERIC / dropholesboys 
   END,
-  -- shouldn't count drophole ratio when single sex school (boys)
+
   drophole_specialneeds = CASE 
     WHEN dropholesspecialneedsboys > 0 OR dropholesspecialneedsgirls > 0 THEN TRUE 
-    ELSE drophole_specialneeds 
+    ELSE FALSE  -- Ensure no NULLs
   END,
-  -- still count special needs facilities because they could come any time
+
   enrollment_over1500 = CASE 
-    WHEN total_pupils >= 1500 AND total_pupils IS NOT NULL THEN TRUE 
-    WHEN total_pupils < 1500 AND total_pupils IS NOT NULL THEN FALSE 
-    ELSE enrollment_over1500
-  END,
-  -- don't count when data on total pupils is missing 
+    WHEN total_pupils IS NULL THEN NULL  -- Keep NULLs intact
+    WHEN total_pupils >= 1500 THEN TRUE 
+    ELSE FALSE 
+  END;
+
+--Update `meet_drophole_ratio` separately (AFTER previous step)
+UPDATE visualization.bemis_school_comb_vis 
+SET 
   meet_drophole_ratio = CASE 
     WHEN girls_per_drophole <= 40 AND boys_per_drophole <= 50 
          AND drophole_specialneeds = TRUE AND enrollment_over1500 = FALSE 
@@ -360,23 +371,28 @@ SET
 -- part (c) -- There are separate latrine blocks for girls and boys and a segregated block of latrines for teachers.
 -- no variable for separate blocks but there is one for teachers 
 
-ALTER TABLE visualization.bemis_school_comb_vis
-ADD COLUMN separate_latrines_teachers BOOLEAN
+-- Add column only if it doesn't exist
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'bemis_school_comb_vis' 
+        AND column_name = 'separate_latrines_teachers'
+    ) THEN
+        ALTER TABLE visualization.bemis_school_comb_vis
+        ADD COLUMN separate_latrines_teachers BOOLEAN;
+    END IF;
+END $$;
 
+-- Update column with correct logic
 UPDATE visualization.bemis_school_comb_vis
 SET separate_latrines_teachers = 
     CASE 
         WHEN dropholesmaleteachers > 0 
-             AND dropholesfemaleteachers > 0
-             AND dropholesmaleteachers IS NOT NULL 
-             AND dropholesfemaleteachers IS NOT NULL 
-        THEN TRUE
+             AND dropholesfemaleteachers > 0 THEN TRUE
         WHEN dropholesmaleteachers IS NULL 
-             AND dropholesfemaleteachers IS NULL
-        THEN NULL 
-        -- Both are NULL, keep it NULL
-        ELSE FALSE 
-        -- Otherwise set to FALSE
+             OR dropholesfemaleteachers IS NULL THEN NULL 
+        ELSE FALSE
     END;
 
 
