@@ -1,5 +1,6 @@
 --------------------------------------------------------------------------
--- Step 1: Create a Procedure to Build the Region-District-LGA Names Table
+-- Create a Procedure to Build the Region-District-LGA Names Table
+-- Recommandation: this should be set to be triggered when ruwasa regions, districts and lgas tables get updated, or receive new data
 --------------------------------------------------------------------------
 CREATE OR REPLACE PROCEDURE process_region_district_lga_names()
 LANGUAGE plpgsql
