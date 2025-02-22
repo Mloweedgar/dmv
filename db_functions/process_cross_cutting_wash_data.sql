@@ -1,0 +1,51 @@
+
+--  Create a Procedure to Populate the Cross-Cutting Wash Data Visualization Table
+-- Note: this script should be run after running other scripts for processing nsmis,bemis and rsdms data. 
+-- so that the tables needed for cross cutting data processing will be ready
+CREATE OR REPLACE PROCEDURE process_cross_cutting_wash_data()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    --------------------------------------------------------------------------
+    -- Step 1: Drop Existing Visualization Table if It Exists
+    --------------------------------------------------------------------------
+    EXECUTE 'DROP TABLE IF EXISTS visualization.cross_cutting_wash_data_vis_test';
+    
+    --------------------------------------------------------------------------
+    -- Step 2: Create the Visualization Table with Joined NSMIS, RUWASA LGA, and Village Data
+    --------------------------------------------------------------------------
+    EXECUTE '
+    CREATE TABLE visualization.cross_cutting_wash_data_vis_test AS  
+    SELECT 
+        l.lgacode,  
+        l.nsmislgacode,
+        l.bemislgacode,
+        l.lganame,
+        l.districtcode,
+        (SELECT rd.districtname FROM public.ruwasa_districts rd where rd.districtcode = l.districtcode) district_name,
+        CASE 
+            WHEN ROUND(AVG(v.infracoverage::INTEGER), 1) = 0 THEN NULL 
+            ELSE ROUND(AVG(v.infracoverage::INTEGER), 1) 
+        END AS lga_water_access_level_perc,
+        ROUND(AVG(n.improved_perc_hhs::NUMERIC)*100, 1) AS lga_improved_san_perc_hhs, 
+        ROUND(AVG(n.handwashstation_perc_hhs::NUMERIC)*100, 1) AS lga_handwashstation_perc_hhs,
+        ROUND(AVG(n.handwashsoap_perc_hhs::NUMERIC)*100,1) AS lga_handwashsoap_perc_hhs,
+        FIRST_VALUE(n.regioncode) OVER (PARTITION BY l.lgacode) AS regioncode,  
+        FIRST_VALUE(n.region_name) OVER (PARTITION BY l.lgacode) AS region_name  
+    FROM public.ruwasa_lgas l  
+    INNER JOIN visualization.nsmis_household_sanitation_reports_vis n  
+        ON n.lgacode = l.nsmislgacode
+    INNER JOIN foreign_schema_ruwasa_rsdms.ruwasa_villages v  
+        ON v.lgacode = l.lgacode
+    GROUP BY 
+        l.lgacode,  
+        l.nsmislgacode,
+        l.bemislgacode,
+        l.lganame,
+        l.districtcode,
+        n.regioncode,
+        n.region_name
+    ';
+    
+END;
+$$;
