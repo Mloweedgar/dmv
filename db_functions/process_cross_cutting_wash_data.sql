@@ -22,6 +22,7 @@ BEGIN
         l.bemislgacode,
         l.lganame,
         l.districtcode,
+        l.geojson,
         (SELECT rd.districtname FROM public.ruwasa_districts rd where rd.districtcode = l.districtcode) district_name,
         CASE 
             WHEN ROUND(AVG(v.infracoverage::INTEGER), 1) = 0 THEN NULL 
@@ -32,7 +33,7 @@ BEGIN
         ROUND(AVG(n.handwashsoap_perc_hhs::NUMERIC)*100,1) AS lga_handwashsoap_perc_hhs,
         FIRST_VALUE(n.regioncode) OVER (PARTITION BY l.lgacode) AS regioncode,  
         FIRST_VALUE(n.region_name) OVER (PARTITION BY l.lgacode) AS region_name  
-    FROM public.ruwasa_lgas l  
+    FROM visualization.ruwasa_lgas_with_geojson l  
     INNER JOIN visualization.nsmis_household_sanitation_reports_vis n  
         ON n.lgacode = l.nsmislgacode
     INNER JOIN foreign_schema_ruwasa_rsdms.ruwasa_villages v  
@@ -42,6 +43,7 @@ BEGIN
         l.nsmislgacode,
         l.bemislgacode,
         l.lganame,
+        l.geojson,
         l.districtcode,
         n.regioncode,
         n.region_name;
