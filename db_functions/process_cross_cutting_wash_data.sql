@@ -47,6 +47,18 @@ BEGIN
         l.districtcode,
         n.regioncode,
         n.region_name;
+
+-- add in the water point functionality data at the LGA level 
+  ALTER TABLE visualization.cross_cutting_wash_data_vis
+  ADD COLUMN func_rate_new NUMERIC, 
+  ADD COLUMN district_name VARCHAR;
+  
+  UPDATE visualization.cross_cutting_wash_data_vis AS cx
+  SET 
+    func_rate_new = wp.func_rate_new 
+    -- district_name = wp.district_name
+  FROM visualization.ruwasa_wps_district AS wp
+  WHERE wp.district_code = cx.districtcode;
     
      --------------------------------------------------------------------------
     -- Step 3: Drop  water_point_report_with_locations Table if It Exists
