@@ -3,18 +3,32 @@
 -- Note: this script should be run after running other scripts for processing nsmis,bemis and rsdms data. 
 -- so that the tables needed for cross cutting data processing will be ready
 -- Recommandation: this script can be scheduled to run monthly
+
 CREATE OR REPLACE PROCEDURE process_cross_cutting_wash_data()
 LANGUAGE plpgsql
 AS $$
 BEGIN
+
     --------------------------------------------------------------------------
-    -- Step 1: Drop Existing Visualization Table if It Exists
+    -- Step 1: Collapse village level data to LGA level before joins
+    --------------------------------------------------------------------------
+
+    DROP TABLE IF EXISTS visualization.ruwasa_service_level_lga; 
+    CREATE TABLE visualization.ruwasa_service_level_lga AS
+    SELECT lgacode, AVG(infracoverage) AS lga_water_access_level_perc
+    FROM foreign_schema_ruwasa_rsdms.ruwasa_villages
+    GROUP BY lgacode;
+
+    --------------------------------------------------------------------------
+    -- Step 2: Drop Existing Visualization Table if It Exists
     --------------------------------------------------------------------------
     EXECUTE 'DROP TABLE IF EXISTS visualization.cross_cutting_wash_data_vis';
     
     --------------------------------------------------------------------------
-    -- Step 2: Create the Visualization Table with Joined NSMIS, RUWASA LGA, and Village Data
+    -- Step 3: Create the Visualization Table with Joined NSMIS and RUWASA LGA with names
     --------------------------------------------------------------------------
+    DROP TABLE IF EXISTS visualization.cross_cutting_wash_data_vis;
+    
     CREATE TABLE visualization.cross_cutting_wash_data_vis AS  
     SELECT 
         l.lgacode,  
@@ -24,10 +38,6 @@ BEGIN
         l.districtcode,
         l.geojson,
         (SELECT rd.districtname FROM public.ruwasa_districts rd where rd.districtcode = l.districtcode) district_name,
-        CASE 
-            WHEN ROUND(AVG(v.infracoverage::INTEGER), 1) = 0 THEN NULL 
-            ELSE ROUND(AVG(v.infracoverage::INTEGER), 1) 
-        END AS lga_water_access_level_perc,
         ROUND(AVG(n.improved_perc_hhs::NUMERIC)*100, 1) AS lga_improved_san_perc_hhs, 
         ROUND(AVG(n.handwashstation_perc_hhs::NUMERIC)*100, 1) AS lga_handwashstation_perc_hhs,
         ROUND(AVG(n.handwashsoap_perc_hhs::NUMERIC)*100,1) AS lga_handwashsoap_perc_hhs,
@@ -36,65 +46,56 @@ BEGIN
     FROM visualization.ruwasa_lgas_with_geojson l  
     INNER JOIN visualization.nsmis_household_sanitation_reports_vis n  
         ON n.lgacode = l.nsmislgacode
-    INNER JOIN foreign_schema_ruwasa_rsdms.ruwasa_villages v  
-        ON v.lgacode = l.lgacode
+    
     GROUP BY 
         l.lgacode,  
         l.nsmislgacode,
         l.bemislgacode,
         l.lganame,
-        l.geojson,
         l.districtcode,
         n.regioncode,
-        n.region_name;
-
--- add in the water point functionality data at the LGA level 
-  ALTER TABLE visualization.cross_cutting_wash_data_vis
-  ADD COLUMN func_rate_new NUMERIC, 
-  ADD COLUMN district_name VARCHAR;
+        n.region_name,
+        l.geojson;
   
-  UPDATE visualization.cross_cutting_wash_data_vis AS cx
-  SET 
-    func_rate_new = wp.func_rate_new 
-    -- district_name = wp.district_name
-  FROM visualization.ruwasa_wps_district AS wp
-  WHERE wp.district_code = cx.districtcode;
-    
-     --------------------------------------------------------------------------
-    -- Step 3: Drop  water_point_report_with_locations Table if It Exists
+  -- SELECT * from visualization.cross_cutting_wash_data_vis limit 100
     --------------------------------------------------------------------------
-    DROP TABLE IF EXISTS visualization.water_point_report_with_locations;
+    --Step 4: Add in the water point functionality data at the LGA level 
+    --------------------------------------------------------------------------
+
+    ALTER TABLE visualization.cross_cutting_wash_data_vis
+    ADD COLUMN func_rate_new NUMERIC;
+    
+    UPDATE visualization.cross_cutting_wash_data_vis AS cx
+    SET 
+      func_rate_new = wp.func_rate_new 
+      -- district_name = wp.district_name
+    FROM visualization.ruwasa_wps_district AS wp
+    WHERE wp.district_code = cx.districtcode;
 
     --------------------------------------------------------------------------
-    -- Step 2: Create the water_point_report_with_locations table
+    -- Step 5: Add in the service level data (derived from infracoverage)
     --------------------------------------------------------------------------
-    CREATE TABLE visualization.water_point_report_with_locations AS
-        SELECT DISTINCT ON (wp.dpid) 
-            wp.dpid,
-            (SELECT region_name FROM visualization.region_district_lga_names rdl 
-            WHERE wp.region = rdl.region_code LIMIT 1) AS region_name,
-            (SELECT district_name FROM visualization.region_district_lga_names rdl 
-            WHERE wp.district_code = rdl.district_code LIMIT 1) AS district_name,
-            (SELECT lga_name FROM visualization.region_district_lga_names rdl 
-            WHERE wp.lga = rdl.lga_code LIMIT 1) AS lga_name,
-            (SELECT villagename FROM foreign_schema_ruwasa_rsdms.ruwasa_villages v  
-            WHERE wp.village = v.villagecode LIMIT 1) AS village_name,
-            wp.ward AS ward_name,
-            wp.functionalitystatus,
-            wp.populationserved,
-            wp.latitude,
-            wp.longitude,
-            wp.report_datetime,
-            (SELECT geojson FROM visualization.region_district_lga_names rdl 
-            WHERE wp.lga = rdl.lga_code LIMIT 1) AS geojson
-        FROM visualization.ruwasa_wp_report_vis wp
-        WHERE wp.latitude IS NOT NULL
-        AND wp.longitude IS NOT NULL
-        AND wp.functionalitystatus IS NOT NULL 
-        AND wp.report_datetime >= date_trunc('month', current_date - interval '3 month')
-        AND wp.report_datetime < date_trunc('month', current_date)
-        AND wp.functionalitystatus IN('functional', 'not_functional', 'functional_need_repair') 
-        ORDER BY wp.dpid, wp.report_datetime DESC;
+
+    ALTER TABLE visualization.cross_cutting_wash_data_vis
+    ADD COLUMN lga_water_access_level_perc NUMERIC;
+    
+    --SELECT * from visualization.cross_cutting_wash_data_vis LIMIT 100;
+    
+    UPDATE visualization.cross_cutting_wash_data_vis AS cx
+    SET 
+      lga_water_access_level_perc = sl.lga_water_access_level_perc
+    FROM visualization.ruwasa_service_level_lga AS sl
+    WHERE sl.lgacode = cx.lgacode; 
+      
+    
     
 END;
 $$;
+
+-- call process
+
+CALL process_cross_cutting_wash_data();
+
+SELECT * from visualization.cross_cutting_wash_data_vis limit 100;
+-- they are missing for the Jijis and MCs that is okay as expected 
+
