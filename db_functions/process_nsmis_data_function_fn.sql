@@ -110,9 +110,23 @@ BEGIN
 
       EXECUTE format('
           UPDATE %I.%I 
-          SET improved_perc_hhs = improved_count_hhs::DOUBLE PRECISION / NULLIF(totalhouseholds, 0),
-              handwashstation_perc_hhs = handwashingstation::DOUBLE PRECISION / NULLIF(totalhouseholds, 0),
-              handwashsoap_perc_hhs = hwfsoapwater::DOUBLE PRECISION / NULLIF(totalhouseholds, 0)',
+          SET improved_perc_hhs = 
+            CASE WHEN (improved_count_hhs::DOUBLE PRECISION / NULLIF(totalhouseholds, 0)) > 1 
+            THEN 1 
+            ELSE (improved_count_hhs::DOUBLE PRECISION / NULLIF(totalhouseholds, 0)) 
+            END,
+
+            handwashstation_perc_hhs = 
+            CASE WHEN (handwashingstation::DOUBLE PRECISION / NULLIF(totalhouseholds, 0)) > 1 
+            THEN 1 
+            ELSE (handwashingstation::DOUBLE PRECISION / NULLIF(totalhouseholds, 0)) 
+             END,
+
+            handwashsoap_perc_hhs = 
+            CASE WHEN (hwfsoapwater::DOUBLE PRECISION / NULLIF(totalhouseholds, 0)) > 1 
+            THEN 1 
+            ELSE (hwfsoapwater::DOUBLE PRECISION / NULLIF(totalhouseholds, 0))
+            END; ', 
           vis_schema, vis_table_name);
     EXCEPTION WHEN OTHERS THEN
       INSERT INTO dmv_data_quality_flags(

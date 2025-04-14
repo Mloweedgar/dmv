@@ -52,7 +52,8 @@ SET totalhouseholds =
 -- check against Anyitike's figure 2024 - April - 10,697,739 households denominator;  
 SELECT SUM(totalhouseholds) AS total_households_sum
 FROM visualization.nsmis_household_sanitation_reports_vis
-WHERE reportdate = '2024-03-31'; -- my figure 10,617,924
+WHERE reportdate = '2024-03-31'; 
+-- my figure 10,617,924
 
 
 
@@ -70,7 +71,9 @@ SET improved_count_hhs =
 -- Anyitike's check 8,260,061 households were improved - rate of 77.2%
 SELECT SUM(improved_count_hhs) AS improved_households_sum
 FROM visualization.nsmis_household_sanitation_reports_vis
-WHERE reportdate = '2024-03-31'; -- my figure 8,273,582
+WHERE reportdate = '2024-03-31'; 
+
+-- my figure 8,273,582
 
 
 -----c. % of improved facilities (types b-e)
@@ -79,26 +82,52 @@ ALTER TABLE visualization.nsmis_household_sanitation_reports_vis
 ADD COLUMN improved_perc_hhs NUMERIC;
 
 UPDATE visualization.nsmis_household_sanitation_reports_vis 
-  SET improved_perc_hhs = improved_count_hhs::DOUBLE PRECISION / NULLIF(totalhouseholds, 0);    
-  
+  SET improved_perc_hhs = 
+  CASE WHEN totalhouseholds= 0 THEN NULL 
+        WHEN (improved_perc_hhs::DOUBLE PRECISION /totalhouseholds) >1
+        THEN 1
+        ELSE (improved_count_hhs::DOUBLE PRECISION /totalhouseholds)
+    END;
+    
 SELECT *
 FROM public.ruwasa_regions
-LIMIT 100 ; -- nsmisregioncode
+LIMIT 100 ; 
+
+-- nsmisregioncode
 -- join with the region and LGA keys so that they can have names on visualizations 
 
 --- d. % with handwashingstation
+SELECT* from visualization.nsmis_household_sanitation_reports_vis
 ALTER TABLE visualization.nsmis_household_sanitation_reports_vis 
 ADD COLUMN handwashstation_perc_hhs NUMERIC;
-UPDATE visualization.nsmis_household_sanitation_reports_vis 
-  SET handwashstation_perc_hhs = handwashingstation::DOUBLE PRECISION / NULLIF(totalhouseholds, 0);    
+UPDATE visualization.nsmis_household_sanitation_reports_vis
+SET handwashstation_perc_hhs = 
+    CASE 
+        WHEN totalhouseholds = 0 THEN NULL  -- Prevents division by zero
+        WHEN (handwashingstation::DOUBLE PRECISION / totalhouseholds) > 1 
+        THEN 1 
+        ELSE (handwashingstation::DOUBLE PRECISION / totalhouseholds) 
+    END;  
+--- replacing over 100% values with 100% because it means more than one handwashing station per household at the village level
+
+-- check that it worked 
+SELECT* from visualization.nsmis_household_sanitation_reports_vis WHERE handwashstation_perc_hhs >1
 
 
 --- e. % with hwfsoapwater
 ALTER TABLE visualization.nsmis_household_sanitation_reports_vis 
 ADD COLUMN handwashsoap_perc_hhs NUMERIC;
 UPDATE visualization.nsmis_household_sanitation_reports_vis 
-  SET handwashsoap_perc_hhs = hwfsoapwater::DOUBLE PRECISION / NULLIF(totalhouseholds, 0);    
+SET handwashsoap_perc_hhs = 
+    CASE 
+        WHEN totalhouseholds = 0 THEN NULL  -- Prevents division by zero
+        WHEN (hwfsoapwater::DOUBLE PRECISION / totalhouseholds) > 1 
+        THEN 1 
+        ELSE (hwfsoapwater::DOUBLE PRECISION / totalhouseholds) 
+    END;
 
+-- check that it worked 
+SELECT* from visualization.nsmis_household_sanitation_reports_vis WHERE handwashsoap_perc_hhs >1
 
 ---- d. Join in region names to nsmis_households_vis
 
@@ -171,11 +200,10 @@ drop TABLE  visualization.nsmis_household_sanitation_reports_vis;
 ALTER TABLE visualization.nsmis_household_sanitation_reports_v RENAME TO nsmis_household_sanitation_reports_vis;
 
 -- look at resulting table 
---SELECT *
-  --FROM visualization.nsmis_household_sanitation_reports_v LIMIT 1000; 
 
 SELECT *
-  FROM visualization.nsmis_household_sanitation_reports_vis LIMIT 1000; 
+  FROM visualization.nsmis_household_sanitation_reports_vis LIMIT 100; 
+SELECT * FROM visualization.nsmis_household_sanitation_reports_vis WHERE lga_name='Masasi TC'
 
 -- check how many rows in the table 
 SELECT COUNT(*) FROM visualization.nsmis_household_sanitation_reports_vis; --204351 records
@@ -234,4 +262,5 @@ SELECT
   FROM visualization.nsmis_household_sanitation_reports_lga;
   
 DROP TABLE visualization.nsmis_household_sanitation_reports_lga;
-SELECT * from visualization.nsmis_household_sanitation_lga
+SELECT * FROM visualization.nsmis_household_sanitation_lga LIMIT 100;
+SELECT * FROM visualization.nsmis_household_sanitation_lga WHERE lga_name='Masasi TC';
