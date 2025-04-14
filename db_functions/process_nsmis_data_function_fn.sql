@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS visualization.dmv_data_quality_flags (
 );
 
 
+-- Recommandation: this script can be scheduled  to run quarterly
 CREATE OR REPLACE PROCEDURE process_nsmis_data()
 LANGUAGE plpgsql
 AS $$
