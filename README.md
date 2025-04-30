@@ -32,7 +32,7 @@ Finally, in the folder 'quality checks' once the scripts are run, a log file is 
 # A note on schemas 
 
 The flow of data comes in from one of two schemas in the dashboards: 
-a. **Public** - data directly imported from PO-RALG and MoH on schools, sanitation and health facilities WASH
-b. **Foreign** - data directly imported from RSDMS on water points, supply and CBWSOs
+1. **Public** - data directly imported from PO-RALG and MoH on schools, sanitation and health facilities WASH
+2. **Foreign** - data directly imported from RSDMS on water points, supply and CBWSOs
 
 The data is subsequently transferred to the **visualization** schema which is where the tables for final visualization on the dashboard are shared. 
