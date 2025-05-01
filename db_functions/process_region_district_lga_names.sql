@@ -10,14 +10,13 @@
 --   For each visualization table dependency below, ensure the corresponding procedure has been run.
 --
 -- DEPENDENCIES (must exist and be fully populated BEFORE running):
---   * visualization.ruwasa_lgas_with_geojson (WARNING: No producing procedure found in db_functions. This table may have been created manually or outside the automated ETL process. This is a risk for automation and should be reviewed.)
+--   * visualization.ruwasa_lgas_with_geojson (produced by process_ruwasa_lgas_with_geojson)
 --   * public.ruwasa_districts (raw, external)
 --   * public.ruwasa_regions (raw, external)
 --
 -- RECOMMENDED EXECUTION ORDER:
 --   1. Ensure all source tables above are loaded and current (via ETL/import)
---   2. For each visualization.* dependency, run its producing procedure if the table is missing or stale:
---        - (No producing procedure found for visualization.ruwasa_lgas_with_geojson; review and address as needed)
+--   2. Run process_ruwasa_lgas_with_geojson for visualization.ruwasa_lgas_with_geojson
 --   3. Run this procedure (process_region_district_lga_names)
 --
 -- NOTE: If any dependency is missing or stale, output will be incomplete or incorrect.

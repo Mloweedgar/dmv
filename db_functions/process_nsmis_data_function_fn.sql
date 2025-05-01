@@ -15,12 +15,12 @@
 --   * public.nsmis_household_sanitation_reports (raw, external)
 --   * public.ruwasa_regions (raw, external)
 --   * public.ruwasa_lgas (raw, external)
---   * visualization.ruwasa_lgas_with_geojson (WARNING: No producing procedure found in db_functions. This table may have been created manually or outside the automated ETL process. This is a risk for automation and should be reviewed.)
+--   * visualization.ruwasa_lgas_with_geojson (produced by process_ruwasa_lgas_with_geojson)
 --
 -- RECOMMENDED EXECUTION ORDER:
 --   1. Ensure all source tables above are loaded and current (via ETL/import)
 --   2. For each visualization.* dependency, run its producing procedure if the table is missing or stale:
---        - (No producing procedure found for visualization.ruwasa_lgas_with_geojson; review and address as needed)
+--        - process_ruwasa_lgas_with_geojson for visualization.ruwasa_lgas_with_geojson
 --   3. Run this procedure (process_nsmis_data)
 --
 -- NOTE: If any dependency is missing or stale, output will be incomplete or incorrect.
@@ -236,7 +236,9 @@ BEGIN
       RAISE;
     END;
 
-    -- Data Quality Check: Flag missing region or LGA names
+    -- QC: Flag missing region or LGA names
+    -- description:
+    -- error_alert_type: 
     EXECUTE format('SELECT COUNT(*) FROM %I.%I WHERE regioncode IS NOT NULL AND region_name IS NULL',
                    vis_schema, vis_table_name)
       INTO v_missing_region_count;
