@@ -1,9 +1,26 @@
---------------------------------------------------------------------------
--- Create or Replace Procedure to Process BEMIS Data for Visualization
--- This procedure creates a combined table and enriches it using data from 
--- various raw sources (services, reports, infrastructure, enrollment, etc.).
--- Recommendation: Schedule for this script can be yearly because we receive data from PO-RALG yearly
---------------------------------------------------------------------------
+-- ============================================================================
+-- process_bemis_data: Build visualization.bemis_school_comb_vis for reporting
+--
+-- This procedure creates and populates the visualization.bemis_school_comb_vis table
+-- by combining and enriching data from BEMIS source tables and reference lookups.
+--
+-- DEPENDENCIES (must exist and be fully populated BEFORE running):
+--   * public.bemis_school_services
+--   * public.bemis_school_reports
+--   * public.bemis_school_infrastructure
+--   * public.bemis_school_enrollment
+--   * visualization.region_district_lga_names
+--     (run process_region_district_lga_names if region/LGA reference data changed)
+--
+-- RECOMMENDED EXECUTION ORDER:
+--   1. Ensure all public.bemis_* tables are loaded and current (external ETL/import)
+--   2. Run process_region_district_lga_names (if needed)
+--   3. Run this procedure (process_bemis_data)
+--
+-- NOTE: If any dependency is missing or stale, output will be incomplete or incorrect.
+--       This script is typically run yearly after new data is received from PO-RALG.
+-- ============================================================================
+
 CREATE OR REPLACE PROCEDURE process_bemis_data()
 LANGUAGE plpgsql
 AS $$
