@@ -1,3 +1,27 @@
+-- ============================================================================
+-- process_ruwasa_district_infracoverage: Build RUWASA district infracoverage table
+--
+-- This procedure creates and populates:
+--   * visualization.ruwasa_district_infracoverage (created here)
+-- by aggregating and enriching RUWASA coverage data at the district level for reporting and visualization.
+--
+-- NOTE ON VISUALIZATION SCHEMA:
+--   All tables in the visualization schema are derived and must be produced by a procedure.
+--   For each visualization table dependency below, ensure the corresponding procedure has been run.
+--
+-- DEPENDENCIES (must exist and be fully populated BEFORE running):
+--   * foreign_schema_ruwasa_rsdms.ruwasa_reports_coverage (raw, external)
+--   * visualization.region_district_lga_names (produced by process_region_district_lga_names)
+--
+-- RECOMMENDED EXECUTION ORDER:
+--   1. Ensure all source tables above are loaded and current (via ETL/import)
+--   2. Run process_region_district_lga_names for visualization.region_district_lga_names
+--   3. Run this procedure (process_ruwasa_district_infracoverage)
+--
+-- NOTE: If any dependency is missing or stale, output will be incomplete or incorrect.
+--       This script is typically run after all upstream data processing is complete.
+-- ============================================================================
+
 -- Create or Replace Procedure to Build RUWASA District Infracoverage Table
 -- This procedure creates and enriches the visualization.ruwasa_district_infracoverage table
 CREATE OR REPLACE PROCEDURE process_ruwasa_district_infracoverage()
