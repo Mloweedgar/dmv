@@ -3,15 +3,15 @@
 This repository contains the processing scripts for the data on the [Unified Wash Performance Dashboard - Tanzania] (https://rsdms.ruwasa.go.tz:8066/), being managed and maintained by the Rural Water and Sanitation Agency (RUWASA), Ministry of Water, Tanzania. The data being processed are coming from three different sources and systems, as follows: 
 
 1. **Ministry of Water RUWASA's RSDMS** - there are two sets of data sources here:
-   a. Water Service and Infrastructure Coverage Data  
-   b. Water Point Functionality Data 
+   - a. Water Service and Infrastructure Coverage Data  
+   - b. Water Point Functionality Data 
 
 2. **Ministry of Health's (MoH) NSMIS**:
-   a. household sanitation reports
-   b. health care facility WASH (pending)
+   - a. household sanitation reports
+   - b. health care facility WASH (pending)
 
 3. **President's Office of Regional and Local Government (PO-RALG)'s BEMIS**:
-   a. data on WASH in schools 
+   - a. data on WASH in schools 
 
 The scripts in this repository process each of these data sources either (a) individually or (b) in combination with eachother or administrative codes or boundary data in order to create cross-cutting visualizations. Here is a description of each of the scripts, the input data sources and output data tables, which are subsequently used in visualizations on the rsdms system (https://rsdms.ruwasa.go.tz:8066/). Please note that a username and login is required to access this internal system. If you are associated with the project, please contact Fravius Kalisa kalisafravy@gmail.com to request your credentials. 
 
