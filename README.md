@@ -1,6 +1,12 @@
 # About the Data Monitoring and Visualization (DMV) repository 
 
-This repository contains the processing scripts for the data on the [Unified Wash Performance Dashboard - Tanzania] (https://rsdms.ruwasa.go.tz:8066/), being managed and maintained by the Rural Water and Sanitation Agency (RUWASA), Ministry of Water, Tanzania. The data being processed are coming from three different sources and systems, as follows: 
+## Introduction 
+
+This repository contains the processing scripts for the data on the [Unified Wash Performance Dashboard - Tanzania](https://rsdms.ruwasa.go.tz:8066/), being managed and maintained by the Rural Water and Sanitation Agency (RUWASA), Ministry of Water, Tanzania. 
+
+## Data Sources
+
+The data being processed are coming from three different sources and systems, as follows: 
 
 1. **Ministry of Water RUWASA's RSDMS** - there are two sets of data sources here:
    - a. Water Service and Infrastructure Coverage Data  
@@ -11,9 +17,11 @@ This repository contains the processing scripts for the data on the [Unified Was
    - b. health care facility WASH (pending)
 
 3. **President's Office of Regional and Local Government (PO-RALG)'s BEMIS**:
-   - a. data on WASH in schools 
+   - a. data on WASH in schools
+  
+## Scripts
 
-The scripts in this repository process each of these data sources either (a) individually or (b) in combination with eachother or administrative codes or boundary data in order to create cross-cutting visualizations. Here is a description of each of the scripts, the input data sources and output data tables, which are subsequently used in visualizations on the rsdms system (https://rsdms.ruwasa.go.tz:8066/). Please note that a username and login is required to access this internal system. If you are associated with the project, please contact Fravius Kalisa kalisafravy@gmail.com to request your credentials. 
+The scripts in this repository process each of these data sources either (a) individually or (b) in combination with eachother or administrative codes or boundary data in order to create cross-cutting visualizations. Here is a description of each of the scripts, the input data sources and output data tables, which are subsequently used in visualizations on the rsdms system (https://rsdms.ruwasa.go.tz:8066/). 
 
 1. **convert_wkt_to_gejson_feature.sql** - this script creates a function that takes shapefile data and converts them to geojson data, necessary for visualization of maps on Apache Superset  
 2. **process_region_district_lga_names.sql** - this script combines the names and codes of the regions, districts and LGAs being used across RUWASA, MoH and PO-RALG so that cross cutting visualizations are possible in process 8. 
@@ -25,8 +33,6 @@ The scripts in this repository process each of these data sources either (a) ind
 8. **process_cross_cutting_wash_data.sql** - this script combines other created tables to create cross cutting visualization tables at LGA and region level 
 
 
-
-
 Finally, in the folder 'quality checks' once the scripts are run, a log file is produced and output with each script, which summarizes the output produced, and any potential errors found with out of bounds values. 
 
 # A note on schemas 
@@ -36,3 +42,8 @@ The flow of data comes in from one of two schemas in the dashboards:
 2. **Foreign** - data directly imported from RSDMS on water points, supply and CBWSOs
 
 The data is subsequently transferred to the **visualization** schema which is where the tables for final visualization on the dashboard are shared. 
+
+## Access to the DMV
+
+Please note that a username and login is required to access this internal system. If you are associated with the project, please contact Fravius Kalisa kalisafravy@gmail.com to request your credentials. 
+
