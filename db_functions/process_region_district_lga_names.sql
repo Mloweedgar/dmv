@@ -1,7 +1,28 @@
---------------------------------------------------------------------------
--- Create a Procedure to Build the Region-District-LGA Names Table
--- Recommandation: this should be set to be triggered when ruwasa regions, districts and lgas tables get updated, or receive new data
---------------------------------------------------------------------------
+-- ============================================================================
+-- process_region_district_lga_names: Build region, district, and LGA names lookup table
+--
+-- This procedure creates and populates:
+--   * visualization.region_district_lga_names (created here)
+-- by joining spatial and administrative reference data for use in downstream reporting and visualization.
+--
+-- NOTE ON VISUALIZATION SCHEMA:
+--   All tables in the visualization schema are derived and must be produced by a procedure.
+--   For each visualization table dependency below, ensure the corresponding procedure has been run.
+--
+-- DEPENDENCIES (must exist and be fully populated BEFORE running):
+--   * visualization.ruwasa_lgas_with_geojson (WARNING: No producing procedure found in db_functions. This table may have been created manually or outside the automated ETL process. This is a risk for automation and should be reviewed.)
+--   * public.ruwasa_districts (raw, external)
+--   * public.ruwasa_regions (raw, external)
+--
+-- RECOMMENDED EXECUTION ORDER:
+--   1. Ensure all source tables above are loaded and current (via ETL/import)
+--   2. For each visualization.* dependency, run its producing procedure if the table is missing or stale:
+--        - (No producing procedure found for visualization.ruwasa_lgas_with_geojson; review and address as needed)
+--   3. Run this procedure (process_region_district_lga_names)
+--
+-- NOTE: If any dependency is missing or stale, output will be incomplete or incorrect.
+--       This script is typically run after spatial or administrative reference data is updated.
+-- ============================================================================
 CREATE OR REPLACE PROCEDURE process_region_district_lga_names()
 LANGUAGE plpgsql
 AS $$
