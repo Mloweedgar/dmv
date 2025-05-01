@@ -1,11 +1,22 @@
 -- ============================================================================
--- Stored Procedure: convert_wkt_to_geojson_feature
--- 
--- Purpose: Converts WKT (Well-Known Text) geometries in a database table to 
--- GeoJSON Feature format, preserving all other columns as properties.
+-- convert_wkt_to_geojson_feature: Utility to convert WKT to GeoJSON Feature
 --
--- This is particularly useful for charts that require
--- GeoJSON formatted data for visualization.
+-- This procedure converts a WKT geometry column in any table to a GeoJSON Feature column.
+--   * It is generic and can be used on any table (including those in the visualization schema).
+--
+-- NOTE ON VISUALIZATION SCHEMA:
+--   All tables in the visualization schema are derived and must be produced by a procedure.
+--   For each visualization table dependency, ensure the corresponding procedure has been run.
+--
+-- DEPENDENCIES:
+--   * None fixed (utility procedure; depends on the table/columns specified at runtime)
+--
+-- RECOMMENDED EXECUTION ORDER:
+--   1. Ensure the target table exists and is up to date (produced by its procedure if visualization.*)
+--   2. Run this procedure with the appropriate arguments
+--
+-- NOTE: If the target table is missing or not up to date, output will be incomplete or incorrect.
+--       This script is typically run as needed for spatial data preparation.
 -- ============================================================================
 CREATE OR REPLACE PROCEDURE convert_wkt_to_geojson_feature(
   p_table_name     text,  -- e.g. 'public.district_boundaries' or 'district_boundaries'
