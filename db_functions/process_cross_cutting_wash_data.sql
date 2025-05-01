@@ -86,6 +86,60 @@ BEGIN
       lga_water_access_level_perc = sl.lga_water_access_level_perc
     FROM visualization.ruwasa_service_level_lga AS sl
     WHERE sl.lgacode = cx.lgacode; 
+    
+    --------------------------------------------------------------------------
+    -- Step 6: Create the LGA level NSMIS data table
+    --------------------------------------------------------------------------
+  CREATE TABLE visualization.nsmis_household_sanitation_reports_lga AS
+  WITH ranked_data AS (
+      SELECT DISTINCT ON (lgacode, lga_name, reportdate) 
+          lgacode,
+          lga_name,
+          reportdate,
+          regioncode,
+          region_name,
+          geojson
+      FROM visualization.nsmis_household_sanitation_reports_vis
+      ORDER BY lgacode, lga_name, reportdate, createdat
+  )
+
+  SELECT 
+      r.lgacode,
+      r.lga_name,
+      r.reportdate,
+      r.regioncode,
+      r.region_name,
+      r.geojson,
+      
+      -- Averages of required percentage variables
+      AVG(v.improved_perc_hhs) AS avg_improved_perc_hhs,
+      AVG(v.handwashstation_perc_hhs) AS avg_handwashstation_perc_hhs,
+      AVG(v.handwashsoap_perc_hhs) AS avg_handwashsoap_perc_hhs
+
+  FROM ranked_data r
+  JOIN visualization.nsmis_household_sanitation_reports_vis v
+  ON r.lgacode = v.lgacode 
+  AND r.lga_name = v.lga_name 
+  AND r.reportdate = v.reportdate 
+
+  GROUP BY r.lgacode, r.lga_name, r.reportdate, r.regioncode, r.region_name, r.geojson;
+
+
+    --------------------------------------------------------------------------
+    -- Step 7: Generate summary NSMIS household sanitation data at the LGA level
+    --------------------------------------------------------------------------
+  CREATE TABLE visualization.nsmis_household_sanitation_lga AS
+  SELECT
+    regioncode,
+    region_name,
+    lgacode,
+    lga_name,
+    reportdate,
+    avg_improved_perc_hhs,
+    avg_handwashsoap_perc_hhs,
+    avg_handwashstation_perc_hhs
+
+    FROM visualization.nsmis_household_sanitation_reports_lga;
       
     
     
