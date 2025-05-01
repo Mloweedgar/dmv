@@ -21,7 +21,11 @@ The data being processed are coming from three different sources and systems, as
   
 ## Scripts
 
-The scripts in this repository process each of these data sources either (a) individually or (b) in combination with eachother or administrative codes or boundary data in order to create cross-cutting visualizations. 
+The scripts in this repository process each of these data sources either.. 
+   (a) individually or 
+   (b) in combination with eachother or administrative codes or boundary data 
+
+...in order to create either individual or cross-cutting visualizations. 
 
 In the process of aggregation, **quality checks** (labelled QC in code) are conducted on the data to identify issues such as... 
 - any issues such as values out of reasonable bounds,
