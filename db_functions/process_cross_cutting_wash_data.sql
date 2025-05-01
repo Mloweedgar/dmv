@@ -1,8 +1,36 @@
+-- ============================================================================
+-- process_cross_cutting_wash_data: Build cross-sector WASH visualization tables
+--
+-- This procedure creates and populates:
+--   * visualization.cross_cutting_wash_data_vis (main output, created here)
+--   * visualization.ruwasa_service_level_lga (intermediate, created here)
+--   * visualization.nsmis_household_sanitation_reports_lga (summary, created here)
+-- by aggregating and joining data from NSMIS, RUWASA, and spatial reference tables.
+--
+-- NOTE ON VISUALIZATION SCHEMA:
+--   All tables in the visualization schema are derived and must be produced by a procedure.
+--   For each visualization table dependency below, ensure the corresponding procedure has been run.
+--
+-- DEPENDENCIES (must exist and be fully populated BEFORE running):
+--   * foreign_schema_ruwasa_rsdms.ruwasa_villages (raw, external)
+--   * visualization.ruwasa_lgas_with_geojson (WARNING: No producing procedure found in db_functions. This table may have been created manually or outside the automated ETL process. This is a risk for automation and should be reviewed.)
+--   * visualization.nsmis_household_sanitation_reports_vis (produced by process_nsmis_data)
+--   * visualization.ruwasa_wps_district (produced by process_ruwasa_wp_report)
+--   * public.ruwasa_districts (raw, external)
+--
+-- RECOMMENDED EXECUTION ORDER:
+--   1. Ensure all source tables above are loaded and current (via ETL/import)
+--   2. For each visualization.* dependency, run its producing procedure if the table is missing or stale:
+--        - process_nsmis_data for visualization.nsmis_household_sanitation_reports_vis
+--        - process_ruwasa_wp_report for visualization.ruwasa_wps_district
+--        - (and so on for other visualization.* dependencies)
+--   3. Run this procedure (process_cross_cutting_wash_data)
+--
+-- NOTE: If any dependency is missing or stale, output will be incomplete or incorrect.
+--       This script is typically run after all upstream data processing is complete (e.g., after NSMIS, BEMIS, and RSDMS data are processed).
+--       Recommended schedule: monthly.
+-- ============================================================================
 
---  Create a Procedure to Populate the Cross-Cutting Wash Data Visualization Table
--- Note: this script should be run after running other scripts for processing nsmis,bemis and rsdms data. 
--- so that the tables needed for cross cutting data processing will be ready
--- Recommandation: this script can be scheduled to run monthly
 
 CREATE OR REPLACE PROCEDURE process_cross_cutting_wash_data()
 LANGUAGE plpgsql
