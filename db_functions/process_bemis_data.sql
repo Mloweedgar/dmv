@@ -126,6 +126,8 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
                     completioncertificate
       FROM public.bemis_school_services;
 
+    -- QC: check and output the number of unique school observations in bemis_school_services
+
     --------------------------------------------------------------------------
     -- Step 3: Update with Region Codes, GPS Coordinates, and Program Flag 
     --         from bemis_school_reports
@@ -141,6 +143,9 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
     WHERE sch.schoolregnumber = r.schoolregnumber
     ';
 
+    -- QC: check and output the number of unique school observations in bemis_school_reports, and those that match or are unmatched with bemis_school_services (column for number matched, column for number unmatched from services to reports, and visa versa)
+    -- QC: if there are unmatched that appear in services but not reports then put in description column, likewise for thsoe in reports but not services
+    
     --------------------------------------------------------------------------
     -- Step 4: Update with Region and LGA Names from the Lookup Table
     --------------------------------------------------------------------------
@@ -152,6 +157,8 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
     FROM visualization.region_district_lga_names AS n
     WHERE sch.lga_code = n.bemislgacode
     ';
+
+    -- QC: output any school registration numbers with missing LGA or region names
 
     --------------------------------------------------------------------------
     -- Step 5: Update Infrastructure Details from bemis_school_infrastructure
@@ -191,6 +198,9 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
     WHERE bscv.schoolregnumber = bsi.schoolregnumber
     ';
 
+    -- QC: check and output the number of unique school observations in bemis_school_infrastructure, and those that match or are unmatched with table created so far (bemis_school_comb_vis) (column for number matched, column for number unmatched from master to using, and visa versa)
+    -- QC: if there are unmatched that appear in school_infrastructure but not master then put in description column, likewise for those in the master but not in infrastructure
+
     --------------------------------------------------------------------------
     -- Step 6: Derive Additional Visualization Variables
     -- 6a: Update school_category based on registration number prefix
@@ -203,6 +213,7 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
           ELSE ''Unknown''
        END
     ';
+    -- QC: output the count of primary, secondary and unknown categories of school (3 columns/rows depending on format of table)
 
     --------------------------------------------------------------------------
     -- 6b: Categorize improved_water_source based on text patterns in watersource
@@ -225,6 +236,7 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
           ELSE NULL 
        END
     ';
+  -- QC: output the count of NULL values for watersource if NULL is not == 0 
 
     --------------------------------------------------------------------------
     -- 6c: Set improved_toilet_type based on infrastructure flags
@@ -245,6 +257,7 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
        OR toilettypeopenpitlatrine = TRUE  
        OR toilettypeothers = TRUE
     ';
+  -- QC: output the count of NULL values for improved_toilet_type if there are any (this would mean a toilet type has been added that  isn't in the list)
 
     --------------------------------------------------------------------------
     -- Step 7: Final Adjustments – Set Defaults for Latrine Fields
@@ -276,6 +289,7 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
     FROM public.bemis_school_enrollment AS e
     WHERE sch.schoolregnumber = e.schoolregnumber
     ';
+    -- QC: output a column/row for total number of each (boys, girls, total) and flag if boys+girls is not equal to total
 
     --------------------------------------------------------------------------
     -- Step 9: Update Columns for Drop Hole Ratios and Related Flags
@@ -302,6 +316,7 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
           ELSE FALSE 
       END
     ';
+    -- QC: (more of a reference check) output the summary statistics of number of schools with over 1500 and number of schools with under 1500 (just for reference)
 
     EXECUTE '
     UPDATE visualization.bemis_school_comb_vis 
@@ -315,6 +330,7 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
           ELSE FALSE 
        END
     ';
+  -- QC: (more of a reference check) output the count of number of schools meeting drophole ratio 
 
     --------------------------------------------------------------------------
     -- Step 10: Update Column for Separate Latrines for Teachers (if not exists)
@@ -327,6 +343,9 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
           ELSE FALSE
        END
     ';
+
+    -- QC: (more of a reference check) output the count of number of schools with separate latrines for teachers. 
+    -- QC: (These summary stats help to quickly identify any reason for out of bounds values under step 10)
     --------------------------------------------------------------------------
     -- Step 10: Update column for improved sanitation
     --------------------------------------------------------------------------
@@ -346,6 +365,6 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
         ELSE 0 
       END
       ';
-
+    -- QC: (more of a reference check) output the average percentage of improved school sanitation across all schools. 
 END;
 $$;
