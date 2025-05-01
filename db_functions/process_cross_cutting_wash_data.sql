@@ -123,23 +123,6 @@ BEGIN
   AND r.reportdate = v.reportdate 
 
   GROUP BY r.lgacode, r.lga_name, r.reportdate, r.regioncode, r.region_name, r.geojson;
-
-
-    --------------------------------------------------------------------------
-    -- Step 7: Generate summary NSMIS household sanitation data at the LGA level
-    --------------------------------------------------------------------------
-  CREATE TABLE visualization.nsmis_household_sanitation_lga AS
-  SELECT
-    regioncode,
-    region_name,
-    lgacode,
-    lga_name,
-    reportdate,
-    avg_improved_perc_hhs,
-    avg_handwashsoap_perc_hhs,
-    avg_handwashstation_perc_hhs
-
-    FROM visualization.nsmis_household_sanitation_reports_lga;
       
     
     
