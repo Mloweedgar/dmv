@@ -1,3 +1,32 @@
+-- ============================================================================
+-- process_nsmis_data: Build NSMIS household sanitation visualization tables
+--
+-- This procedure creates and populates:
+--   * visualization.nsmis_household_sanitation_reports_vis (created here)
+--   * visualization.nsmis_household_sanitation_lga (created here)
+--   * (also updates visualization.dmv_data_quality_flags for data quality issues)
+-- by transforming, enriching, and aggregating raw NSMIS data for visualization.
+--
+-- NOTE ON VISUALIZATION SCHEMA:
+--   All tables in the visualization schema are derived and must be produced by a procedure.
+--   For each visualization table dependency below, ensure the corresponding procedure has been run.
+--
+-- DEPENDENCIES (must exist and be fully populated BEFORE running):
+--   * public.nsmis_household_sanitation_reports (raw, external)
+--   * public.ruwasa_regions (raw, external)
+--   * public.ruwasa_lgas (raw, external)
+--   * visualization.ruwasa_lgas_with_geojson (WARNING: No producing procedure found in db_functions. This table may have been created manually or outside the automated ETL process. This is a risk for automation and should be reviewed.)
+--
+-- RECOMMENDED EXECUTION ORDER:
+--   1. Ensure all source tables above are loaded and current (via ETL/import)
+--   2. For each visualization.* dependency, run its producing procedure if the table is missing or stale:
+--        - (No producing procedure found for visualization.ruwasa_lgas_with_geojson; review and address as needed)
+--   3. Run this procedure (process_nsmis_data)
+--
+-- NOTE: If any dependency is missing or stale, output will be incomplete or incorrect.
+--       This script is typically run after all upstream data processing is complete (recommended schedule: quarterly).
+-- ============================================================================
+
 CREATE TABLE IF NOT EXISTS visualization.dmv_data_quality_flags (
   id SERIAL PRIMARY KEY,
   institution TEXT,
