@@ -25,7 +25,7 @@
 --       This script is typically run after all upstream data processing is complete.
 -- ============================================================================
 
-CREATE OR REPLACE PROCEDURE process_wp_gps_data()
+CREATE OR REPLACE PROCEDURE public.process_wp_gps_data()
 LANGUAGE plpgsql
 AS $$
 BEGIN

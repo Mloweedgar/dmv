@@ -35,7 +35,7 @@
 --   - Safe to re-run (idempotent).
 -- ============================================================================
 
-CREATE OR REPLACE PROCEDURE process_all_dmv_data()
+CREATE OR REPLACE PROCEDURE public.process_all_dmv_data()
 LANGUAGE plpgsql
 AS $$
 DECLARE

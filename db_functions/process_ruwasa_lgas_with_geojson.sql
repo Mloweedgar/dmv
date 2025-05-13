@@ -21,7 +21,7 @@
 --       This script is typically run after spatial or administrative reference data is updated.
 -- ============================================================================
 
-CREATE OR REPLACE PROCEDURE process_ruwasa_lgas_with_geojson()
+CREATE OR REPLACE PROCEDURE public.process_ruwasa_lgas_with_geojson()
 LANGUAGE plpgsql
 AS $$
 BEGIN

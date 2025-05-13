@@ -25,7 +25,7 @@
 -- ============================================================================
 
 -- Create or Replace Procedure to Build and Process RUWASA Water Points Report Tables
-CREATE OR REPLACE PROCEDURE process_ruwasa_wp_report()
+CREATE OR REPLACE PROCEDURE public.process_ruwasa_wp_report()
 LANGUAGE plpgsql
 AS $$
 BEGIN

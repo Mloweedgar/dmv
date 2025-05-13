@@ -22,7 +22,7 @@
 -- NOTE: If any dependency is missing or stale, output will be incomplete or incorrect.
 --       This script is typically run after spatial or administrative reference data is updated.
 -- ============================================================================
-CREATE OR REPLACE PROCEDURE process_region_district_lga_names()
+CREATE OR REPLACE PROCEDURE public.process_region_district_lga_names()
 LANGUAGE plpgsql
 AS $$
 BEGIN

@@ -33,7 +33,7 @@
 -- ============================================================================
 
 
-CREATE OR REPLACE PROCEDURE process_cross_cutting_wash_data()
+CREATE OR REPLACE PROCEDURE public.process_cross_cutting_wash_data()
 LANGUAGE plpgsql
 AS $$
 BEGIN
