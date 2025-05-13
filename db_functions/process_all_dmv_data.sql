@@ -53,7 +53,7 @@ BEGIN
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: public.ruwasa_lgas'; END IF;
     PERFORM 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'tz_lgas';
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: public.tz_lgas'; END IF;
-    CALL process_ruwasa_lgas_with_geojson();
+    CALL public.process_ruwasa_lgas_with_geojson();
 
     --------------------------------------------------------------------------
     -- STEP 2: Build Region/District/LGA Names Lookup
@@ -68,7 +68,7 @@ BEGIN
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: public.ruwasa_regions'; END IF;
     PERFORM 1 FROM information_schema.tables WHERE table_schema = 'visualization' AND table_name = 'ruwasa_lgas_with_geojson';
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: visualization.ruwasa_lgas_with_geojson'; END IF;
-    CALL process_region_district_lga_names();
+    CALL public.process_region_district_lga_names();
 
     --------------------------------------------------------------------------
     -- STEP 3: Build BEMIS Combined School Data
@@ -87,7 +87,7 @@ BEGIN
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: public.bemis_school_enrollment'; END IF;
     PERFORM 1 FROM information_schema.tables WHERE table_schema = 'visualization' AND table_name = 'region_district_lga_names';
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: visualization.region_district_lga_names'; END IF;
-    CALL process_bemis_data();
+    CALL public.process_bemis_data();
 
     --------------------------------------------------------------------------
     -- STEP 4: Build RUWASA Water Points Report Tables
@@ -100,7 +100,7 @@ BEGIN
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: public.ruwasa_waterpoints_report'; END IF;
     PERFORM 1 FROM information_schema.tables WHERE table_schema = 'visualization' AND table_name = 'region_district_lga_names';
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: visualization.region_district_lga_names'; END IF;
-    CALL process_ruwasa_wp_report();
+    CALL public.process_ruwasa_wp_report();
 
     --------------------------------------------------------------------------
     -- STEP 5: Build RUWASA District Infracoverage Table
@@ -113,7 +113,7 @@ BEGIN
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: foreign_schema_ruwasa_rsdms.ruwasa_reports_coverage'; END IF;
     PERFORM 1 FROM information_schema.tables WHERE table_schema = 'visualization' AND table_name = 'region_district_lga_names';
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: visualization.region_district_lga_names'; END IF;
-    CALL process_ruwasa_district_infracoverage();
+    CALL public.process_ruwasa_district_infracoverage();
 
     --------------------------------------------------------------------------
     -- STEP 6: Build NSMIS Household Sanitation Visualization Tables
@@ -130,7 +130,7 @@ BEGIN
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: public.ruwasa_lgas'; END IF;
     PERFORM 1 FROM information_schema.tables WHERE table_schema = 'visualization' AND table_name = 'ruwasa_lgas_with_geojson';
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: visualization.ruwasa_lgas_with_geojson'; END IF;
-    CALL process_nsmis_data();
+    CALL public.process_nsmis_data();
 
     --------------------------------------------------------------------------
     -- STEP 7: Build Water Point Report with Locations
@@ -145,7 +145,7 @@ BEGIN
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: visualization.region_district_lga_names'; END IF;
     PERFORM 1 FROM information_schema.tables WHERE table_schema = 'foreign_schema_ruwasa_rsdms' AND table_name = 'ruwasa_villages';
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: foreign_schema_ruwasa_rsdms.ruwasa_villages'; END IF;
-    CALL process_gps_point_data();
+    CALL public.process_gps_point_data();
 
     --------------------------------------------------------------------------
     -- STEP 8: Build Cross-Cutting WASH Visualization Tables
@@ -164,7 +164,7 @@ BEGIN
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: visualization.ruwasa_wps_district'; END IF;
     PERFORM 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ruwasa_districts';
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: public.ruwasa_districts'; END IF;
-    CALL process_cross_cutting_wash_data();
+    CALL public.process_cross_cutting_wash_data();
 
     --------------------------------------------------------------------------
     -- END OF PIPELINE
