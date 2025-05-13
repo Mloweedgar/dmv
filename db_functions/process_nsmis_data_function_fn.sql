@@ -308,6 +308,12 @@ BEGIN
       );
       RAISE;
     END;
-    
+   
+    -- for the sake of visualization, we are dropping the observations where the values are null because otherwise it won't generate the bars
+    DELETE FROM visualization.nsmis_household_sanitation_lga
+    WHERE 
+        avg_improved_perc_hhs IS NULL 
+        OR avg_handwashsoap_perc_hhs IS NULL
+        OR avg_handwashstation_perc_hhs IS NULL;
 END;
 $$;
