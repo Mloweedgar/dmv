@@ -11,6 +11,9 @@
 --
 -- DEPENDENCIES (must exist and be fully populated BEFORE running):
 --   * visualization.ruwasa_wp_report_vis (WARNING: No producing procedure found in db_functions. This table may have been created manually or outside the automated ETL process. This is a risk for automation and should be reviewed.)
+
+---QC - can  you still not find this file? I believe it should be output from the process_ruwasa_wp_report. If you cannot find the script to create it, please add
+
 --   * visualization.region_district_lga_names (produced by process_region_district_lga_names)
 --   * foreign_schema_ruwasa_rsdms.ruwasa_villages (raw, external)
 --
@@ -61,6 +64,7 @@ BEGIN
         AND wp.longitude IS NOT NULL
         AND wp.functionalitystatus IS NOT NULL 
         AND wp.report_datetime >= date_trunc('month', current_date - interval '3 month')
+        -- QC: so, to be clear, this file is just keeping GPS points from the last 3 months of data? This is fine if so.
         AND wp.report_datetime < date_trunc('month', current_date)
         AND wp.functionalitystatus IN('functional', 'not_functional', 'functional_need_repair') 
         ORDER BY wp.dpid, wp.report_datetime DESC;
@@ -71,3 +75,5 @@ $$;
 -- call process
 
 CALL process_wp_gps_data();
+
+-- note we are not currently displaying this map on the dashboard because it takes a long time to load. But the data is used in one of the charts if you search  'water point functionality status map'

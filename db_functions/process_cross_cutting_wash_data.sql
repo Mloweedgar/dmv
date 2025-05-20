@@ -105,6 +105,8 @@ BEGIN
     FROM visualization.ruwasa_wps_district AS wp
     WHERE wp.district_code = cx.districtcode;
 
+    -- QC: Check that the number of districts match between cross_cutting table and ruwasa_wps_district table 
+
     --------------------------------------------------------------------------
     -- Step 5: Add in the service level data (derived from infracoverage)
     --------------------------------------------------------------------------
@@ -120,9 +122,13 @@ BEGIN
     FROM visualization.ruwasa_service_level_lga AS sl
     WHERE sl.lgacode = cx.lgacode; 
     
+    -- QC: Check the count on the number of LGAs in sl and cx that match so no data goes missing 
+
     --------------------------------------------------------------------------
     -- Step 6: Create the LGA level NSMIS data table
     --------------------------------------------------------------------------
+
+    -- this step should no longer be necessary if we import the prior created table from process_nsmis_data_function_fn
   CREATE TABLE visualization.nsmis_household_sanitation_reports_lga AS
   WITH ranked_data AS (
       SELECT DISTINCT ON (lgacode, lga_name, reportdate) 

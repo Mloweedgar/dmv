@@ -86,7 +86,7 @@ BEGIN
         FROM public.ruwasa_waterpoints_report wp
     ';
     
-    
+    -- QC: The below is a soft quality check that ultimately wants to be more of an output with summary statistics each time this script is run. Not necessarily an error
          CREATE TABLE quality_checks.temp_functionality_summary AS
             SELECT 
                 functionalitystatus, 
@@ -137,6 +137,8 @@ BEGIN
                 WHEN func_denom = 0 THEN NULL
                 ELSE sum_wp_functional::NUMERIC / func_denom * 100
             END';
+
+    -- QC: check if there are districts and years with blank values for all functionality statuses and print them out i.e. district name, year where sum_wp_functional == BLANK
 
     --------------------------------------------------------------------------
     -- Step 3: Create District-Quarter Aggregation Table
