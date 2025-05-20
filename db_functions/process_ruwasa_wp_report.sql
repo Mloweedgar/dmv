@@ -25,7 +25,7 @@
 -- ============================================================================
 
 -- Create or Replace Procedure to Build and Process RUWASA Water Points Report Tables
-CREATE OR REPLACE PROCEDURE process_ruwasa_wp_report()
+CREATE OR REPLACE PROCEDURE public.process_ruwasa_wp_report()
 LANGUAGE plpgsql
 AS $$
 BEGIN
@@ -33,60 +33,69 @@ BEGIN
     -- Step 1: Drop and Create the Main Water Points Visualization Table
     --------------------------------------------------------------------------
     EXECUTE 'DROP TABLE IF EXISTS visualization.ruwasa_wp_report_vis';
-    EXECUTE 'CREATE TABLE visualization.ruwasa_wp_report_vis AS SELECT * FROM public.ruwasa_waterpoints_report';
-
-    -- Add year_timestamp and populate
-    EXECUTE 'ALTER TABLE visualization.ruwasa_wp_report_vis ADD COLUMN year_timestamp TIMESTAMP';
-    EXECUTE 'UPDATE visualization.ruwasa_wp_report_vis SET year_timestamp = TO_TIMESTAMP(report_year::TEXT, ''YYYY'')';
-
-    -- Add month_timestamp and populate
-    EXECUTE 'ALTER TABLE visualization.ruwasa_wp_report_vis ADD COLUMN month_timestamp TIMESTAMP';
-    EXECUTE 'UPDATE visualization.ruwasa_wp_report_vis SET month_timestamp = DATE_TRUNC(''month'', report_datetime)';
-
-    -- Add quarter_timestamp and populate
-    EXECUTE 'ALTER TABLE visualization.ruwasa_wp_report_vis ADD COLUMN quarter_timestamp TIMESTAMP';
-    EXECUTE 'UPDATE visualization.ruwasa_wp_report_vis SET quarter_timestamp = DATE_TRUNC(''quarter'', report_datetime)';
-
-    -- Add region, district names
-    EXECUTE 'ALTER TABLE visualization.ruwasa_wp_report_vis ADD COLUMN region_code VARCHAR, ADD COLUMN region_name VARCHAR, ADD COLUMN district_name VARCHAR(255)';
     EXECUTE '
-        UPDATE visualization.ruwasa_wp_report_vis AS wpd
+        CREATE TABLE visualization.ruwasa_wp_report_vis AS
+        SELECT
+            wp.report_datetime,
+            wp.region,
+            wp.district AS district_code,
+            wp.village,
+            wp.dpid,
+            wp.dpname,
+            wp.wps,
+            wp.dpcode,
+            wp.latitude,
+            wp.longitude,
+            wp.populationserved,
+            wp.yoc,
+            wp.meternumber,
+            wp.scheme,
+            wp.schemetype,
+            wp.servicearea,
+            wp.paymenttype,
+            wp.functionalitystatus,
+            wp.organisation,
+            wp.totalavailablegaps,
+            wp.completeness,
+            wp.ward,
+            wp.servedbyruwasa,
+            wp.lga,
+            wp.institutioncategoryid,
+            wp.institutionareaid,
+            wp.sysid,
+            wp.report_year,
+            wp.quarter,
+            wp.createdat,
+            -- Derived columns:
+            TO_TIMESTAMP(wp.report_year, ''YYYY'') AS year_timestamp,
+            DATE_TRUNC(''month'', wp.report_datetime) AS month_timestamp,
+            DATE_TRUNC(''quarter'', wp.report_datetime) AS quarter_timestamp,
+            CASE WHEN wp.functionalitystatus = ''functional'' THEN 1 ELSE 0 END AS wp_functional,
+            CASE WHEN wp.functionalitystatus = ''functional_need_repair'' THEN 1 ELSE 0 END AS wp_functional_needs_repair,
+            CASE WHEN wp.functionalitystatus = ''not_functional'' THEN 1 ELSE 0 END AS wp_non_functional,
+            CASE WHEN wp.functionalitystatus IN (''abandoned'', ''archived'') THEN 1 ELSE 0 END AS wp_abandoned_archived,
+            CASE WHEN wp.functionalitystatus = ''on_construction'' THEN 1 ELSE 0 END AS wp_inconstruction,
+            CASE WHEN wp.functionalitystatus IN (''functional'', ''functional_need_repair'', ''not_functional'') THEN 1 ELSE 0 END AS wp_func_denominator,
+            CASE
+                WHEN wp.functionalitystatus = ''functional'' THEN 1
+                WHEN wp.functionalitystatus = ''functional_need_repair'' THEN 0.5
+                WHEN wp.functionalitystatus IN (''not_functional'', ''abandoned'') THEN 0
+                WHEN wp.functionalitystatus IN (''archived'', ''on_construction'') THEN NULL
+            END AS wp_status_numeric
+        FROM public.ruwasa_waterpoints_report wp
+    ';
+
+    -- Add region/district columns
+    EXECUTE 'ALTER TABLE visualization.ruwasa_wp_report_vis ADD COLUMN region_code VARCHAR, ADD COLUMN region_name VARCHAR, ADD COLUMN district_name VARCHAR';
+    -- Populate region/district columns with a single update using a join
+    EXECUTE '
+        UPDATE visualization.ruwasa_wp_report_vis vis
         SET region_code = d.region_code,
             region_name = d.region_name,
             district_name = d.district_name
-        FROM visualization.region_district_lga_names AS d
-        WHERE wpd.district = d.district_code';
-    EXECUTE 'ALTER TABLE visualization.ruwasa_wp_report_vis RENAME COLUMN district TO district_code';
-
-    -- Add functionality dummies
-    EXECUTE 'ALTER TABLE visualization.ruwasa_wp_report_vis  
-      ADD COLUMN wp_functional INTEGER,  
-      ADD COLUMN wp_functional_needs_repair INTEGER,  
-      ADD COLUMN wp_non_functional INTEGER,  
-      ADD COLUMN wp_abandoned_archived INTEGER,  
-      ADD COLUMN wp_inconstruction INTEGER,
-      ADD COLUMN wp_func_denominator INTEGER';
-    EXECUTE '
-        UPDATE visualization.ruwasa_wp_report_vis  
-        SET  
-            wp_functional = CASE WHEN functionalitystatus = ''functional'' THEN 1 ELSE 0 END,  
-            wp_functional_needs_repair = CASE WHEN functionalitystatus = ''functional_need_repair'' THEN 1 ELSE 0 END,  
-            wp_non_functional = CASE WHEN functionalitystatus = ''not_functional'' THEN 1 ELSE 0 END,  
-            wp_abandoned_archived = CASE WHEN functionalitystatus IN (''abandoned'', ''archived'') THEN 1 ELSE 0 END,  
-            wp_inconstruction = CASE WHEN functionalitystatus = ''on_construction'' THEN 1 ELSE 0 END,
-            wp_func_denominator = CASE WHEN functionalitystatus IN(''functional'', ''functional_needs_repair'', ''not_functional'') THEN 1 ELSE 0 END';
-
-    -- Add status numeric column
-    EXECUTE 'ALTER TABLE visualization.ruwasa_wp_report_vis ADD COLUMN wp_status_numeric NUMERIC';
-    EXECUTE '
-        UPDATE visualization.ruwasa_wp_report_vis 
-        SET wp_status_numeric = 
-            CASE 
-                WHEN functionalitystatus = ''functional'' THEN 1
-                WHEN functionalitystatus = ''functional_needs_repair'' THEN 0.5
-                WHEN functionalitystatus IN (''not_functional'', ''abandoned'') THEN 0
-                WHEN functionalitystatus IN (''archived'', ''on_construction'') THEN NULL
-            END';
+        FROM visualization.region_district_lga_names d
+        WHERE vis.district_code = d.district_code
+    ';
 
     --------------------------------------------------------------------------
     -- Step 2: Create District-Year Aggregation Table

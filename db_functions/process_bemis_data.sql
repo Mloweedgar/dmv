@@ -21,7 +21,7 @@
 --       This script is typically run yearly after new data is received from PO-RALG.
 -- ============================================================================
 
-CREATE OR REPLACE PROCEDURE process_bemis_data()
+CREATE OR REPLACE PROCEDURE public.process_bemis_data()
 LANGUAGE plpgsql
 AS $$
 BEGIN

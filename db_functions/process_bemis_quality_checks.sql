@@ -1,6 +1,4 @@
-
-
-CREATE OR REPLACE PROCEDURE process_bemis_quality_checks()
+CREATE OR REPLACE PROCEDURE public.process_bemis_quality_checks()
 LANGUAGE plpgsql
 AS $$
 BEGIN

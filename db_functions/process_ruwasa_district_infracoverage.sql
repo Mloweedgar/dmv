@@ -24,7 +24,7 @@
 
 -- Create or Replace Procedure to Build RUWASA District Infracoverage Table
 -- This procedure creates and enriches the visualization.ruwasa_district_infracoverage table
-CREATE OR REPLACE PROCEDURE process_ruwasa_district_infracoverage()
+CREATE OR REPLACE PROCEDURE public.process_ruwasa_district_infracoverage()
 LANGUAGE plpgsql
 AS $$
 BEGIN

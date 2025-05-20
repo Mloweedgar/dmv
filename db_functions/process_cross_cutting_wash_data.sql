@@ -13,7 +13,7 @@
 --
 -- DEPENDENCIES (must exist and be fully populated BEFORE running):
 --   * foreign_schema_ruwasa_rsdms.ruwasa_villages (raw, external)
---   * visualization.ruwasa_lgas_with_geojson (WARNING: No producing procedure found in db_functions. This table may have been created manually or outside the automated ETL process. This is a risk for automation and should be reviewed.)
+--   * visualization.ruwasa_lgas_with_geojson (produced by process_ruwasa_lgas_with_geojson)
 --   * visualization.nsmis_household_sanitation_reports_vis (produced by process_nsmis_data)
 --   * visualization.ruwasa_wps_district (produced by process_ruwasa_wp_report)
 --   * public.ruwasa_districts (raw, external)
@@ -21,6 +21,7 @@
 -- RECOMMENDED EXECUTION ORDER:
 --   1. Ensure all source tables above are loaded and current (via ETL/import)
 --   2. For each visualization.* dependency, run its producing procedure if the table is missing or stale:
+--        - process_ruwasa_lgas_with_geojson for visualization.ruwasa_lgas_with_geojson
 --        - process_nsmis_data for visualization.nsmis_household_sanitation_reports_vis
 --        - process_ruwasa_wp_report for visualization.ruwasa_wps_district
 --        - (and so on for other visualization.* dependencies)
@@ -32,7 +33,7 @@
 -- ============================================================================
 
 
-CREATE OR REPLACE PROCEDURE process_cross_cutting_wash_data()
+CREATE OR REPLACE PROCEDURE public.process_cross_cutting_wash_data()
 LANGUAGE plpgsql
 AS $$
 BEGIN

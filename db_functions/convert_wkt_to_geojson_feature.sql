@@ -18,7 +18,7 @@
 -- NOTE: If the target table is missing or not up to date, output will be incomplete or incorrect.
 --       This script is typically run as needed for spatial data preparation.
 -- ============================================================================
-CREATE OR REPLACE PROCEDURE convert_wkt_to_geojson_feature(
+CREATE OR REPLACE PROCEDURE public.convert_wkt_to_geojson_feature(
   p_table_name     text,  -- e.g. 'public.district_boundaries' or 'district_boundaries'
   p_wkt_column     text,  -- column name that contains the WKT, e.g. 'wkt'
   p_geojson_column text DEFAULT 'geojson',  -- column to store the GeoJSON output

@@ -21,7 +21,19 @@ The data being processed are coming from three different sources and systems, as
   
 ## Scripts
 
-The scripts in this repository process each of these data sources either (a) individually or (b) in combination with eachother or administrative codes or boundary data in order to create cross-cutting visualizations. In the process of aggregation, checks are conducted on the data to identify any issues such as values out of reasonable bounds, too few or too many observations, imperfect matches in the number of observations between datasets and any missing or unexpected data. It is expected that subsequent work will be conducted to automatically detect errors in the data and send back a summary of the data report to the original provider of the data for human revisions and correction.  
+The scripts in this repository process each of these data sources either.. 
+- a. individually or 
+- b. in combination with eachother or administrative codes or boundary data 
+
+...in order to create either individual or cross-cutting visualizations. 
+
+In the process of aggregation, **quality checks** (labelled QC in code) are conducted on the data to identify issues such as... 
+- any issues such as values out of reasonable bounds,
+- too few or too many observations,
+- imperfect matches in the number of observations between datasets,
+- any missing or unexpected data.
+
+It is expected that subsequent work will be conducted to automatically detect errors in the data and send back a summary of the data report to the original provider of the data for human revisions and correction.  
 
 
 Here is a description of each of the scripts, the input data sources and output data tables, which are subsequently used in visualizations on the rsdms system (https://rsdms.ruwasa.go.tz:8066/). 
