@@ -86,6 +86,10 @@ BEGIN
         l.geojson;
   
   -- SELECT * from visualization.cross_cutting_wash_data_vis limit 100
+
+    -- QC: (optimization point) Ultimately for optimization, it would be better to just directly join the table created at LGA level of the NSMIS data i.e. visualization.nsmis_household_sanitation_reports_lga to the ruwasa_lgas_with_geojson
+    -- QC: then the Quality check is to make sure that the numbers match. If there are extra LGAs in one or the other of the files, then they should be counted and the names flagged in a description column/row 
+    
     --------------------------------------------------------------------------
     --Step 4: Add in the water point functionality data at the LGA level 
     --------------------------------------------------------------------------

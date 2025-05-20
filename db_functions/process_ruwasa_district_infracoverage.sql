@@ -36,6 +36,8 @@ BEGIN
     --------------------------------------------------------------------------
     -- Step 2: Create the Table with Average infracoverage per District
     --------------------------------------------------------------------------
+
+  
     EXECUTE '
     CREATE TABLE visualization.ruwasa_district_infracoverage AS
     SELECT district, AVG(infracoverage) AS avg_infracoverage
@@ -46,6 +48,11 @@ BEGIN
     ) AND infracoverage > 0 
     GROUP BY district
     ';
+
+    -- the above code creates a version with only the most recent year - Instead we need one version with yearly and one version with most recent 
+    -- refer to this script to change it https://rsdms.ruwasa.go.tz:8066/sqllab/?savedQueryId=53 
+
+    --- note to edgar to modify the code above to do this process instead 
 
     --------------------------------------------------------------------------
     -- Step 3: Add Region and District Name Columns
