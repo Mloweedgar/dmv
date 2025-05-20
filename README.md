@@ -51,7 +51,7 @@ Here is a description of each of the scripts, the input data sources and output 
 Finally, in the folder 'quality checks' once the scripts are run, a log file is produced and output with each script, which summarizes the output produced, and any potential errors found with out of bounds values. 
 
 # Running the scripts
-In order to run any of the procedure scripts created you can simply put "CALL name_of_process_you_wish_to_call()". For example if I wanted to call process number 6 because the system received new data from NSMIS I would go to sql lab, open an untitled query and write "CALL process_nsmis_data_function_fn();" then run it. 
+In order to run any of the procedure scripts created you can simply put "CALL name_of_process_you_wish_to_call();". For example if I wanted to call process number 6 because the system received new data from NSMIS I would go to sql lab, open an untitled query and write "CALL process_nsmis_data_function_fn();" then run it. 
 
 # A note on schemas 
 
