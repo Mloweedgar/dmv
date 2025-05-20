@@ -24,6 +24,7 @@
 --       This script is typically run after all upstream data processing is complete.
 -- ============================================================================
 
+
 -- Create or Replace Procedure to Build and Process RUWASA Water Points Report Tables
 CREATE OR REPLACE PROCEDURE public.process_ruwasa_wp_report()
 LANGUAGE plpgsql
@@ -84,7 +85,17 @@ BEGIN
             END AS wp_status_numeric
         FROM public.ruwasa_waterpoints_report wp
     ';
-
+    
+    
+         CREATE TABLE quality_checks.temp_functionality_summary AS
+            SELECT 
+                functionalitystatus, 
+                COUNT(*) AS count,
+                ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS percentage
+            FROM visualization.ruwasa_wp_report_vis
+            GROUP BY functionalitystatus
+            ORDER BY count DESC;
+    
     -- Add region/district columns
     EXECUTE 'ALTER TABLE visualization.ruwasa_wp_report_vis ADD COLUMN region_code VARCHAR, ADD COLUMN region_name VARCHAR, ADD COLUMN district_name VARCHAR';
     -- Populate region/district columns with a single update using a join
