@@ -99,7 +99,8 @@ BEGIN
     --------------------------------------------------------------------------
     -- Step 2: Insert Base Data from bemis_school_services
     --------------------------------------------------------------------------
-   
+    -- WORKAROUND: Only include records with reportdate before 2025 to avoid duplicate schoolregnumber issues.
+    -- This is a temporary solution and should be revisited to properly handle multiple years of data.
     
 INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
                     haselectricity,
@@ -124,7 +125,8 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
                     capitationgrant,
                     signedsitebook,
                     completioncertificate
-      FROM public.bemis_school_services;
+      FROM public.bemis_school_services
+      WHERE EXTRACT(YEAR FROM reportdate) < 2025;
 
     -- QC: check and output the number of unique school observations in bemis_school_services
 
