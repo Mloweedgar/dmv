@@ -45,7 +45,8 @@ Here is a description of each of the scripts, the input data sources and output 
 5. **process_ruwasa_wp_report.sql** - (this needs to be converted to a process by edgar)
 6. **process_nsmis_data_function_fn.sql** - this script processes the MoH data on households sanitation - including creation of the variables for improved sanitation from the original toilet types, as well as data on hand hygeine access. 
 7. **process_bemis_data.sql** - this script processes the PO-RALG data on BEMIS for visualization of variables such as improved water and sanitation in schools 
-9. **process_cross_cutting_wash_data.sql** - this script combines other created tables to create cross cutting visualization tables at LGA and region level 
+8. **process_cross_cutting_wash_data.sql** - this script combines other created tables to create cross cutting visualization tables at LGA and region level
+9. **process_ruwasa_lgas_with_geojson** - processes ruwasa lgas and adds shapefile information to them
 
 
 Finally, in the folder 'quality checks' once the scripts are run, a log file is produced and output with each script, which summarizes the output produced, and any potential errors found with out of bounds values. 
