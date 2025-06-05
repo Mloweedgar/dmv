@@ -44,9 +44,47 @@ BEGIN
 
     DROP TABLE IF EXISTS visualization.ruwasa_service_level_lga; 
     CREATE TABLE visualization.ruwasa_service_level_lga AS
-    SELECT lgacode, AVG(infracoverage) AS lga_water_access_level_perc
-    FROM foreign_schema_ruwasa_rsdms.ruwasa_villages
-    GROUP BY lgacode;
+    SELECT 
+            lgacode, 
+            AVG(infracoverage) AS lga_water_access_level_perc,
+            SUM(
+              CASE 
+                WHEN status = 1 
+                AND isvillage = 'true' 
+                THEN 1 
+                ELSE 0 
+              END
+            ) AS villages_in_lga,
+            SUM(
+              CASE 
+                WHEN status = 1 
+                AND isvillage = 'true' 
+                AND servicetype != 'no_service' 
+                THEN 1 
+                ELSE 0 
+              END
+            ) AS villages_with_service,
+            SUM(
+              CASE 
+                WHEN status = 1 
+                AND isvillage = 'true' 
+                AND servicetype = 'no_service' 
+                THEN 1 
+                ELSE 0 
+              END
+            ) AS villages_no_service, 
+            SUM(
+              CASE 
+                WHEN status = 1 
+                AND isvillage = 'true' 
+                AND servedbyruwasa = 'false' 
+                THEN 1 
+                ELSE 0 
+              END
+            ) AS served_by_wssa
+          FROM foreign_schema_ruwasa_rsdms.ruwasa_villages
+          GROUP BY lgacode;
+
 
     --------------------------------------------------------------------------
     -- Step 2: Drop Existing Visualization Table if It Exists
