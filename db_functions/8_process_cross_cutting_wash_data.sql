@@ -109,10 +109,15 @@ BEGIN
         ROUND(AVG(n.handwashstation_perc_hhs::NUMERIC)*100, 1) AS lga_handwashstation_perc_hhs,
         ROUND(AVG(n.handwashsoap_perc_hhs::NUMERIC)*100,1) AS lga_handwashsoap_perc_hhs,
         FIRST_VALUE(n.regioncode) OVER (PARTITION BY l.lgacode) AS regioncode,  
-        FIRST_VALUE(n.region_name) OVER (PARTITION BY l.lgacode) AS region_name  
+        FIRST_VALUE(n.region_name) OVER (PARTITION BY l.lgacode) AS region_name,
+        ROUND(AVG(b.improved_water_source::NUMERIC)*100,1) AS lga_school_improved_water_perc,
+        ROUND(AVG(b.improved_toilet_type::NUMERIC)*100,1) AS lga_school_improved_toilet_type_perc
+
     FROM visualization.ruwasa_lgas_with_geojson l  
     INNER JOIN visualization.nsmis_household_sanitation_reports_vis n  
         ON n.lgacode = l.nsmislgacode
+    INNER JOIN visualization.bemis_school_comb_vis b
+        ON l.bemislgacode = b.lga_code 
     
     GROUP BY 
         l.lgacode,  
@@ -191,7 +196,11 @@ BEGIN
       -- Averages of required percentage variables
       AVG(v.improved_perc_hhs) AS avg_improved_perc_hhs,
       AVG(v.handwashstation_perc_hhs) AS avg_handwashstation_perc_hhs,
-      AVG(v.handwashsoap_perc_hhs) AS avg_handwashsoap_perc_hhs
+      AVG(v.handwashsoap_perc_hhs) AS avg_handwashsoap_perc_hhs,
+
+      -- variables as is from visualization variables
+      v.lga_school_improved_water_perc,
+      v.lga_school_improved_toilet_type_perc
 
   FROM ranked_data r
   JOIN visualization.nsmis_household_sanitation_reports_vis v
@@ -209,7 +218,4 @@ $$;
 -- call process
 
 CALL process_cross_cutting_wash_data();
-
-SELECT * from visualization.cross_cutting_wash_data_vis limit 100;
--- they are missing for the Jijis and MCs that is okay as expected 
 

@@ -228,22 +228,25 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
     --------------------------------------------------------------------------
     EXECUTE '
     UPDATE visualization.bemis_school_comb_vis
-    SET improved_water_source = CASE 
-          WHEN watersource ILIKE ''%default%'' 
-            OR watersource ILIKE ''%maji ya bomba%'' 
-            OR watersource ILIKE ''%maji ya mvua%'' 
-            OR watersource ILIKE ''%visima vifupi%'' 
-            OR watersource ILIKE ''%visima vilivyojengwa%'' 
-            OR watersource ILIKE ''%visima vifupi vilivyofungwa pampu za mikono%'' 
-          THEN 1 
-          WHEN watersource ILIKE ''%maji ya mto%'' 
-            OR watersource ILIKE ''%bwawa%'' 
-            OR watersource ILIKE ''%maji ya ziwa%'' 
-            OR watersource ILIKE ''%chemchem%'' 
-          THEN 0 
-          ELSE NULL 
-       END
-    ';
+          SET improved_water_source = CASE 
+            WHEN watersource ILIKE ANY (ARRAY[
+                '%default%',
+                '%maji ya bomba%',
+                '%maji ya mvua%',
+                '%visima vifupi%',
+                '%visima vilivyojengwa%',
+                '%visima vifupi vilivyofungwa pampu za mikono%'
+            ]) THEN 1
+
+            WHEN watersource ILIKE ANY (ARRAY[
+                '%maji ya mto%',
+                '%bwawa%',
+                '%maji ya ziwa%',
+                '%chemchem%'
+            ]) THEN 0
+
+            ELSE NULL
+          END';
   -- QC: output the count of NULL values for watersource if NULL is not == 0 
 
     --------------------------------------------------------------------------
