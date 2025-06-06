@@ -15,14 +15,13 @@ The DMV data pipeline is a robust, automated system for processing, aggregating,
 - **db_functions/**: Contains all SQL procedures for data processing and orchestration.
   - Each file defines a single procedure, with clear documentation and dependency notes.
   - `process_all_dmv_data.sql`: The master orchestration procedure that runs all others in the correct order.
-- **Other folders** (not shown): May include ETL scripts, documentation, or configuration files as needed.
 
 ## Procedure Documentation
 
 Below is a summary of each procedure in `db_functions`, including its purpose, outputs, dependencies, and special notes.
 
 ### 1. `process_ruwasa_lgas_with_geojson`
-- **Purpose:** Build `visualization.ruwasa_lgas_with_geojson` by joining LGA data with GeoJSON shapes.
+- **Purpose:** Build `visualization.ruwasa_lgas_with_geojson` by joining LGA data with GeoJSON .
 - **Outputs:** `visualization.ruwasa_lgas_with_geojson`
 - **Dependencies:**
   - `public.ruwasa_lgas` (external, must be loaded)
@@ -187,8 +186,7 @@ The orchestration procedure (`process_all_dmv_data`) enforces this order and che
   - If a visualization table is missing its producing procedure, automation will break.
 - **Manual Steps:**
   - Ensure all raw data loads are complete before running the pipeline.
-- **Contact/Escalation:**
-  - [Add contact info or escalation path here.]
+
 
 ## Change Management
 
