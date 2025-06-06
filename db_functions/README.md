@@ -31,12 +31,13 @@ Below is a summary of each procedure in `db_functions`, including its purpose, o
 - **Notes:** Run first; all spatial joins depend on this table.
 
 ### 2. `process_region_district_lga_names`
-- **Purpose:** Build `visualization.region_district_lga_names` as a lookup for region, district, and LGA names.
+- **Purpose:** Build `visualization.region_district_lga_names` as a canonical lookup for region, district, and LGA names and codes.
 - **Outputs:** `visualization.region_district_lga_names`
 - **Dependencies:**
-  - `visualization.ruwasa_lgas_with_geojson` (produced by previous step)
-  - `public.ruwasa_districts` (external, must be loaded)
-  - `public.ruwasa_regions` (external, must be loaded)
+  - `public.ruwasa_lgas` (raw, external, must be loaded)
+  - `public.ruwasa_districts` (raw, external, must be loaded)
+  - `public.ruwasa_regions` (raw, external, must be loaded)
+- **Notes:** Run after the three source tables above are loaded and current. Downstream procedures rely on this lookup; run it before any step that references `visualization.region_district_lga_names`.
 
 ### 2a. `process_region_district_lga_lookup`
 - **Purpose:** Build `visualization.region_district_lga_lookup` as a comprehensive lookup for region, district, and LGA codes/names, supporting cross-cutting visualizations and harmonization across data sources.
