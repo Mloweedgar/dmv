@@ -44,9 +44,47 @@ BEGIN
 
     DROP TABLE IF EXISTS visualization.ruwasa_service_level_lga; 
     CREATE TABLE visualization.ruwasa_service_level_lga AS
-    SELECT lgacode, AVG(infracoverage) AS lga_water_access_level_perc
-    FROM foreign_schema_ruwasa_rsdms.ruwasa_villages
-    GROUP BY lgacode;
+    SELECT 
+            lgacode, 
+            AVG(infracoverage) AS lga_water_access_level_perc,
+            SUM(
+              CASE 
+                WHEN status = 1 
+                AND isvillage = 'true' 
+                THEN 1 
+                ELSE 0 
+              END
+            ) AS villages_in_lga,
+            SUM(
+              CASE 
+                WHEN status = 1 
+                AND isvillage = 'true' 
+                AND servicetype != 'no_service' 
+                THEN 1 
+                ELSE 0 
+              END
+            ) AS villages_with_service,
+            SUM(
+              CASE 
+                WHEN status = 1 
+                AND isvillage = 'true' 
+                AND servicetype = 'no_service' 
+                THEN 1 
+                ELSE 0 
+              END
+            ) AS villages_no_service, 
+            SUM(
+              CASE 
+                WHEN status = 1 
+                AND isvillage = 'true' 
+                AND servedbyruwasa = 'false' 
+                THEN 1 
+                ELSE 0 
+              END
+            ) AS served_by_wssa
+          FROM foreign_schema_ruwasa_rsdms.ruwasa_villages
+          GROUP BY lgacode;
+
 
     --------------------------------------------------------------------------
     -- Step 2: Drop Existing Visualization Table if It Exists
@@ -71,10 +109,15 @@ BEGIN
         ROUND(AVG(n.handwashstation_perc_hhs::NUMERIC)*100, 1) AS lga_handwashstation_perc_hhs,
         ROUND(AVG(n.handwashsoap_perc_hhs::NUMERIC)*100,1) AS lga_handwashsoap_perc_hhs,
         FIRST_VALUE(n.regioncode) OVER (PARTITION BY l.lgacode) AS regioncode,  
-        FIRST_VALUE(n.region_name) OVER (PARTITION BY l.lgacode) AS region_name  
+        FIRST_VALUE(n.region_name) OVER (PARTITION BY l.lgacode) AS region_name,
+        ROUND(AVG(b.improved_water_source::NUMERIC)*100,1) AS lga_school_improved_water_perc,
+        ROUND(AVG(b.improved_toilet_type::NUMERIC)*100,1) AS lga_school_improved_toilet_type_perc
+
     FROM visualization.ruwasa_lgas_with_geojson l  
     INNER JOIN visualization.nsmis_household_sanitation_reports_vis n  
         ON n.lgacode = l.nsmislgacode
+    INNER JOIN visualization.bemis_school_comb_vis b
+        ON l.bemislgacode = b.lga_code 
     
     GROUP BY 
         l.lgacode,  
@@ -105,6 +148,8 @@ BEGIN
     FROM visualization.ruwasa_wps_district AS wp
     WHERE wp.district_code = cx.districtcode;
 
+    -- QC: Check that the number of districts match between cross_cutting table and ruwasa_wps_district table 
+
     --------------------------------------------------------------------------
     -- Step 5: Add in the service level data (derived from infracoverage)
     --------------------------------------------------------------------------
@@ -120,9 +165,13 @@ BEGIN
     FROM visualization.ruwasa_service_level_lga AS sl
     WHERE sl.lgacode = cx.lgacode; 
     
+    -- QC: Check the count on the number of LGAs in sl and cx that match so no data goes missing 
+
     --------------------------------------------------------------------------
     -- Step 6: Create the LGA level NSMIS data table
     --------------------------------------------------------------------------
+
+    -- this step should no longer be necessary if we import the prior created table from process_nsmis_data_function_fn
   CREATE TABLE visualization.nsmis_household_sanitation_reports_lga AS
   WITH ranked_data AS (
       SELECT DISTINCT ON (lgacode, lga_name, reportdate) 
@@ -147,7 +196,11 @@ BEGIN
       -- Averages of required percentage variables
       AVG(v.improved_perc_hhs) AS avg_improved_perc_hhs,
       AVG(v.handwashstation_perc_hhs) AS avg_handwashstation_perc_hhs,
-      AVG(v.handwashsoap_perc_hhs) AS avg_handwashsoap_perc_hhs
+      AVG(v.handwashsoap_perc_hhs) AS avg_handwashsoap_perc_hhs,
+
+      -- variables as is from visualization variables
+      v.lga_school_improved_water_perc,
+      v.lga_school_improved_toilet_type_perc
 
   FROM ranked_data r
   JOIN visualization.nsmis_household_sanitation_reports_vis v
@@ -165,7 +218,4 @@ $$;
 -- call process
 
 CALL process_cross_cutting_wash_data();
-
-SELECT * from visualization.cross_cutting_wash_data_vis limit 100;
--- they are missing for the Jijis and MCs that is okay as expected 
 

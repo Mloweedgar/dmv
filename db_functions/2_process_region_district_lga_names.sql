@@ -57,3 +57,5 @@ BEGIN
 
 END;
 $$;
+
+-- QC: I just want to check on lines 51 and 52 - are you joining lgas with districts? as lgas can only be joined with LGAs and likewise with districts

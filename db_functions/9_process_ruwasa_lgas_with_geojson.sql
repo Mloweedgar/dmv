@@ -43,3 +43,5 @@ BEGIN
     WHERE target.lganame = source."Authority";
 END;
 $$; 
+
+-- QC: Check if there are any unjoined LGA names and output them if so 

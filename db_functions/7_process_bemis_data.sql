@@ -1,3 +1,5 @@
+
+
 -- ============================================================================
 -- process_bemis_data: Build visualization.bemis_school_comb_vis for reporting
 --
@@ -36,6 +38,7 @@ BEGIN
     EXECUTE '
     CREATE TABLE visualization.bemis_school_comb_vis (
         schoolregnumber VARCHAR PRIMARY KEY,
+        reportdate      DATE,
         watersource     VARCHAR,
         region_code     VARCHAR,
         lga_code        VARCHAR(255),
@@ -95,7 +98,7 @@ BEGIN
         signedsitebook BOOLEAN,
         completioncertificate BOOLEAN
     )';
-
+  
     --------------------------------------------------------------------------
     -- Step 2: Insert Base Data from bemis_school_services
     --------------------------------------------------------------------------
@@ -103,6 +106,7 @@ BEGIN
     -- This is a temporary solution and should be revisited to properly handle multiple years of data.
     
 INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
+                    reportdate,
                     haselectricity,
                     handwashingfacilities,
                     handwashingtype,
@@ -115,6 +119,7 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
                     completioncertificate)
       SELECT
                     schoolregnumber,
+                    reportdate,
                     haselectricity,
                     handwashingfacilities,
                     handwashingtype,
@@ -126,8 +131,8 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
                     signedsitebook,
                     completioncertificate
       FROM public.bemis_school_services
-      WHERE EXTRACT(YEAR FROM reportdate) < 2025;
-
+      WHERE EXTRACT(YEAR FROM bemis_school_services.reportdate) = 2024;
+    ---TODO: note this is a temporary fix which should be changed so we can just see 2024 data
     -- QC: check and output the number of unique school observations in bemis_school_services
 
     --------------------------------------------------------------------------
@@ -197,9 +202,10 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
       watertanks = bsi.watertanks,
       specialgirlsroom = bsi.specialgirlsroom
     FROM public.bemis_school_infrastructure AS bsi
-    WHERE bscv.schoolregnumber = bsi.schoolregnumber
+    WHERE bscv.schoolregnumber = bsi.schoolregnumber AND
+    EXTRACT(YEAR FROM bsi.reportdate) = 2024;
     ';
-
+    -- TODO: remove temporary fix to check out just one year at a time in the data 
     -- QC: check and output the number of unique school observations in bemis_school_infrastructure, and those that match or are unmatched with table created so far (bemis_school_comb_vis) (column for number matched, column for number unmatched from master to using, and visa versa)
     -- QC: if there are unmatched that appear in school_infrastructure but not master then put in description column, likewise for those in the master but not in infrastructure
 
@@ -222,22 +228,25 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
     --------------------------------------------------------------------------
     EXECUTE '
     UPDATE visualization.bemis_school_comb_vis
-    SET improved_water_source = CASE 
-          WHEN watersource ILIKE ''%default%'' 
-            OR watersource ILIKE ''%maji ya bomba%'' 
-            OR watersource ILIKE ''%maji ya mvua%'' 
-            OR watersource ILIKE ''%visima vifupi%'' 
-            OR watersource ILIKE ''%visima vilivyojengwa%'' 
-            OR watersource ILIKE ''%visima vifupi vilivyofungwa pampu za mikono%'' 
-          THEN 1 
-          WHEN watersource ILIKE ''%maji ya mto%'' 
-            OR watersource ILIKE ''%bwawa%'' 
-            OR watersource ILIKE ''%maji ya ziwa%'' 
-            OR watersource ILIKE ''%chemchem%'' 
-          THEN 0 
-          ELSE NULL 
-       END
-    ';
+          SET improved_water_source = CASE 
+            WHEN watersource ILIKE ANY (ARRAY[
+                '%default%',
+                '%maji ya bomba%',
+                '%maji ya mvua%',
+                '%visima vifupi%',
+                '%visima vilivyojengwa%',
+                '%visima vifupi vilivyofungwa pampu za mikono%'
+            ]) THEN 1
+
+            WHEN watersource ILIKE ANY (ARRAY[
+                '%maji ya mto%',
+                '%bwawa%',
+                '%maji ya ziwa%',
+                '%chemchem%'
+            ]) THEN 0
+
+            ELSE NULL
+          END';
   -- QC: output the count of NULL values for watersource if NULL is not == 0 
 
     --------------------------------------------------------------------------
