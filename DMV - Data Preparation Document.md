@@ -1,5 +1,7 @@
 # DMV (Data Monitoring and Visualization System) Data Preparation Documentation
 
+> **Note:** This document focuses on data preparation, ETL, and system architecture for the DMV. For a general overview, see the [main README](./README.md). For details on running and managing database functions, see [db_functions/README.md](./db_functions/README.md).
+
 ## 1. Introduction
 
 **Purpose:**  

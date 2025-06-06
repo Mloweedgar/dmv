@@ -1,5 +1,7 @@
 # DMV Data Pipeline: Procedures and Orchestration
 
+> **Note:** This document focuses on running and managing the DMV database functions and procedures. For a general overview, see the [main README](../README.md). For data preparation and ETL details, see [DMV - Data Preparation Document](../DMV%20-%20Data%20Preparation%20Document.md).
+
 ## Project Overview
 
 The DMV data pipeline is a robust, automated system for processing, aggregating, and preparing data for reporting and visualization. It is designed to support data-driven decision-making by transforming raw data from multiple sources into clean, analysis-ready tables in the `visualization` schema. The pipeline is implemented as a series of SQL procedures, orchestrated to ensure all dependencies are satisfied and outputs are reliably produced.
