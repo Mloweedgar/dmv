@@ -94,8 +94,11 @@ Data formats for raw data are guided by the API payload structure documentation 
 - **Responsibilities:**  
   Provide optimized, aggregated datasets for dashboards. Data is transformed and refreshed via scheduled ETL processes.
 
----
+### **public Schema**
 
+- A harmonized lookup table for region, district, and LGA codes/names is created by the `public.process_region_district_lga_lookup` procedure. This supplements the existing process for region/district/LGA names and supports consistent joins and aggregations across all data sources for downstream visualizations.
+
+---
 
 ## 6. ETL Process Details
 

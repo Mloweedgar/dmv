@@ -40,6 +40,7 @@ Here is a description of each of the scripts, the input data sources and output 
 
 1. **convert_wkt_to_gejson_feature.sql** - this script creates a function that takes shapefile data and converts them to geojson data, necessary for visualization of maps on Apache Superset  
 2. **process_region_district_lga_names.sql** - this script combines the names and codes of the regions, districts and LGAs being used across RUWASA, MoH and PO-RALG so that cross cutting visualizations are possible in process 8. 
+2a. **process_region_district_lga_lookup.sql** - this script creates a lookup table for region, district, and LGA codes/names, supporting cross-cutting visualizations. It supplements process_region_district_lga_names.sql and is used for additional harmonization or lookup needs.
 3. **process_gps_point_data.sql** - this script processes GPS data on water points, cleans it to get down to only key information for visualization (Edgar - does it also remove points outside Tanzania's boundaries?) 
 4. **process_ruwasa_district_infracoverage.sql** - (this needs to be converted to a process by edgar) this script 
 5. **process_ruwasa_wp_report.sql** - (this needs to be converted to a process by edgar)
@@ -56,10 +57,10 @@ In order to run any of the procedure scripts created you can simply put "CALL na
 
 # A note on schemas 
 
-A schema is considered the “blueprint” of a database which describes how the data may relate to other tables or other data models. The two schema on to which the data are brought in the DMV dashboards are the public schema or the foreign schema:
+A schema is considered the "blueprint" of a database which describes how the data may relate to other tables or other data models. The two schema on to which the data are brought in the DMV dashboards are the public schema or the foreign schema:
 
 1. **public** - data directly imported from PO-RALG and MoH on schools, sanitation and health facilities WASH
-2. **foreign** - data directly imported from RSDMS on water points, supply and CBWSOs. It is called ‘foreign’ as it is foreign to the RSDMS.  
+2. **foreign** - data directly imported from RSDMS on water points, supply and CBWSOs. It is called 'foreign' as it is foreign to the RSDMS.  
 
 Once the data is processed, output tables are produced. These can go to: 
 3. The **visualization** schema which is where the tables for final visualization on the dashboard are shared. 
