@@ -1,8 +1,9 @@
 -- ============================================================================
--- process_ruwasa_district_infracoverage: Build RUWASA district infracoverage table
+-- process_ruwasa_district_infracoverage: Build RUWASA district infracoverage tables (yearly and most recent)
 --
 -- This procedure creates and populates:
---   * visualization.ruwasa_district_infracoverage (created here)
+--   * visualization.ruwasa_district_infracoverage_yearly (yearly averages, for big number/evolution charts)
+--   * visualization.ruwasa_district_infracoverage (most recent, for cross-cutting charts)
 -- by aggregating and enriching RUWASA coverage data at the district level for reporting and visualization.
 --
 -- NOTE ON VISUALIZATION SCHEMA:
@@ -22,19 +23,76 @@
 --       This script is typically run after all upstream data processing is complete.
 -- ============================================================================
 
--- Create or Replace Procedure to Build RUWASA District Infracoverage Table
--- This procedure creates and enriches the visualization.ruwasa_district_infracoverage table
+-- Create or Replace Procedure to Build RUWASA District Infracoverage Tables
+-- This procedure creates and enriches the visualization.ruwasa_district_infracoverage_yearly and visualization.ruwasa_district_infracoverage tables
 CREATE OR REPLACE PROCEDURE public.process_ruwasa_district_infracoverage()
 LANGUAGE plpgsql
 AS $$
 BEGIN
     --------------------------------------------------------------------------
-    -- Step 1: Drop Existing Table if It Exists
+    -- Step 1: Drop Existing Tables if They Exist
     --------------------------------------------------------------------------
+    EXECUTE 'DROP TABLE IF EXISTS visualization.ruwasa_district_infracoverage_yearly';
     EXECUTE 'DROP TABLE IF EXISTS visualization.ruwasa_district_infracoverage';
 
     --------------------------------------------------------------------------
-    -- Step 2: Create the Table with Average infracoverage per District
+    -- Step 2: Create Yearly Infracoverage Table (for big number/evolution charts)
+    --------------------------------------------------------------------------
+    EXECUTE '
+    CREATE TABLE visualization.ruwasa_district_infracoverage_yearly AS
+    SELECT 
+        district,
+        EXTRACT(YEAR FROM report_datetime) AS year,
+        AVG(infracoverage) AS avg_infracoverage
+    FROM foreign_schema_ruwasa_rsdms.ruwasa_reports_coverage
+    GROUP BY district, EXTRACT(YEAR FROM report_datetime)
+    ORDER BY district, year
+    ';
+
+    --------------------------------------------------------------------------
+    -- Step 3: Add Region and District Name Columns to Yearly Table
+    --------------------------------------------------------------------------
+    EXECUTE '
+    ALTER TABLE visualization.ruwasa_district_infracoverage_yearly
+      ADD COLUMN region_code VARCHAR,
+      ADD COLUMN region_name VARCHAR,
+      ADD COLUMN district_name VARCHAR(255)
+    ';
+
+    --------------------------------------------------------------------------
+    -- Step 4: Update Region and District Names in Yearly Table
+    --------------------------------------------------------------------------
+    EXECUTE '
+    UPDATE visualization.ruwasa_district_infracoverage_yearly AS y
+      SET 
+        district_name = n.district_name,
+        region_name = n.region_name,
+        region_code = n.region_code
+    FROM visualization.region_district_lga_names AS n
+    WHERE y.district = n.district_code
+    ';
+
+    --------------------------------------------------------------------------
+    -- Step 5: Rename Column district to district_code in Yearly Table
+    --------------------------------------------------------------------------
+    EXECUTE '
+    ALTER TABLE visualization.ruwasa_district_infracoverage_yearly
+    RENAME COLUMN district TO district_code
+    ';
+
+    --------------------------------------------------------------------------
+    -- Step 6: Add year_timestamp Column and Populate as Timestamp in Yearly Table
+    --------------------------------------------------------------------------
+    EXECUTE '
+    ALTER TABLE visualization.ruwasa_district_infracoverage_yearly ADD COLUMN year_timestamp TIMESTAMP
+    ';
+    EXECUTE '
+    UPDATE visualization.ruwasa_district_infracoverage_yearly
+    SET year_timestamp = TO_TIMESTAMP(year::TEXT, ''YYYY'')
+    ';
+
+    --------------------------------------------------------------------------
+    -- Step 7: Create Most Recent Infracoverage Table (for cross-cutting charts)
     --------------------------------------------------------------------------
 
   
@@ -55,7 +113,7 @@ BEGIN
     --- note to edgar to modify the code above to do this process instead 
 
     --------------------------------------------------------------------------
-    -- Step 3: Add Region and District Name Columns
+    -- Step 8: Add Region and District Name Columns to Most Recent Table
     --------------------------------------------------------------------------
     EXECUTE '
     ALTER TABLE visualization.ruwasa_district_infracoverage
@@ -65,7 +123,7 @@ BEGIN
     ';
 
     --------------------------------------------------------------------------
-    -- Step 4: Update Region and District Names
+    -- Step 9: Update Region and District Names in Most Recent Table
     --------------------------------------------------------------------------
     EXECUTE '
     UPDATE visualization.ruwasa_district_infracoverage AS d
@@ -78,7 +136,7 @@ BEGIN
     ';
 
     --------------------------------------------------------------------------
-    -- Step 5: Rename Column district to district_code
+    -- Step 10: Rename Column district to district_code in Most Recent Table
     --------------------------------------------------------------------------
     EXECUTE '
     ALTER TABLE visualization.ruwasa_district_infracoverage

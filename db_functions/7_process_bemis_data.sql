@@ -23,6 +23,19 @@
 --       This script is typically run yearly after new data is received from PO-RALG.
 -- ============================================================================
 
+-- ============================================================================
+-- QC LOGGING TABLE (create once, outside this procedure):
+--
+-- CREATE SCHEMA IF NOT EXISTS quality_checks;
+-- CREATE TABLE IF NOT EXISTS quality_checks.qc_log (
+--     id SERIAL PRIMARY KEY,
+--     check_name TEXT,
+--     result_value TEXT,
+--     details TEXT,
+--     log_time TIMESTAMP DEFAULT NOW()
+-- );
+-- ============================================================================
+
 CREATE OR REPLACE PROCEDURE public.process_bemis_data()
 LANGUAGE plpgsql
 AS $$
@@ -96,6 +109,7 @@ BEGIN
         menstrualcounselor BOOLEAN,
         capitationgrant NUMERIC,
         signedsitebook BOOLEAN,
+        reportdate DATE,
         completioncertificate BOOLEAN
     )';
   
@@ -116,6 +130,7 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
                     menstrualcounselor,
                     capitationgrant,
                     signedsitebook,
+                    reportdate,
                     completioncertificate)
       SELECT
                     schoolregnumber,
@@ -129,11 +144,17 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
                     menstrualcounselor,
                     capitationgrant,
                     signedsitebook,
+                    reportdate,
                     completioncertificate
       FROM public.bemis_school_services
       WHERE EXTRACT(YEAR FROM bemis_school_services.reportdate) = 2024;
     ---TODO: note this is a temporary fix which should be changed so we can just see 2024 data
-    -- QC: check and output the number of unique school observations in bemis_school_services
+
+    -- QC: Step 2 - Unique schools in services
+    INSERT INTO quality_checks.qc_log (check_name, result_value)
+    SELECT 'unique_schools_services', COUNT(DISTINCT schoolregnumber)::TEXT
+    FROM public.bemis_school_services
+    WHERE EXTRACT(YEAR FROM reportdate) = 2024;
 
     --------------------------------------------------------------------------
     -- Step 3: Update with Region Codes, GPS Coordinates, and Program Flag 
@@ -150,9 +171,38 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
     WHERE sch.schoolregnumber = r.schoolregnumber
     ';
 
-    -- QC: check and output the number of unique school observations in bemis_school_reports, and those that match or are unmatched with bemis_school_services (column for number matched, column for number unmatched from services to reports, and visa versa)
-    -- QC: if there are unmatched that appear in services but not reports then put in description column, likewise for thsoe in reports but not services
-    
+    -- QC: Step 3 - Unique in reports
+    INSERT INTO quality_checks.qc_log (check_name, result_value)
+    SELECT 'unique_schools_reports', COUNT(DISTINCT schoolregnumber)::TEXT
+    FROM public.bemis_school_reports;
+
+    -- QC: Step 3 - Matched between services and reports
+    INSERT INTO quality_checks.qc_log (check_name, result_value)
+    SELECT 'matched_services_reports', COUNT(DISTINCT s.schoolregnumber)::TEXT
+    FROM public.bemis_school_services s
+    JOIN public.bemis_school_reports r ON s.schoolregnumber = r.schoolregnumber
+    WHERE EXTRACT(YEAR FROM s.reportdate) = 2024;
+
+    -- QC: Step 3 - In services but not in reports
+    INSERT INTO quality_checks.qc_log (check_name, result_value, details)
+    SELECT 'unmatched_services_not_in_reports', COUNT(*), STRING_AGG(unmatched.schoolregnumber, ', ')
+    FROM (
+        SELECT s.schoolregnumber
+        FROM public.bemis_school_services s
+        LEFT JOIN public.bemis_school_reports r ON s.schoolregnumber = r.schoolregnumber
+        WHERE r.schoolregnumber IS NULL AND EXTRACT(YEAR FROM s.reportdate) = 2024
+    ) unmatched;
+
+    -- QC: Step 3 - In reports but not in services
+    INSERT INTO quality_checks.qc_log (check_name, result_value, details)
+    SELECT 'unmatched_reports_not_in_services', COUNT(*), STRING_AGG(unmatched.schoolregnumber, ', ')
+    FROM (
+        SELECT r.schoolregnumber
+        FROM public.bemis_school_reports r
+        LEFT JOIN public.bemis_school_services s ON r.schoolregnumber = s.schoolregnumber
+        WHERE s.schoolregnumber IS NULL
+    ) unmatched;
+
     --------------------------------------------------------------------------
     -- Step 4: Update with Region and LGA Names from the Lookup Table
     --------------------------------------------------------------------------
@@ -165,7 +215,11 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
     WHERE sch.lga_code = n.bemislgacode
     ';
 
-    -- QC: output any school registration numbers with missing LGA or region names
+    -- QC: Step 4 - Schools missing region/LGA names
+    INSERT INTO quality_checks.qc_log (check_name, result_value, details)
+    SELECT 'missing_region_lga_names', COUNT(*), STRING_AGG(schoolregnumber, ', ')
+    FROM visualization.bemis_school_comb_vis
+    WHERE region_name IS NULL OR lga_name IS NULL;
 
     --------------------------------------------------------------------------
     -- Step 5: Update Infrastructure Details from bemis_school_infrastructure
@@ -209,6 +263,37 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
     -- QC: check and output the number of unique school observations in bemis_school_infrastructure, and those that match or are unmatched with table created so far (bemis_school_comb_vis) (column for number matched, column for number unmatched from master to using, and visa versa)
     -- QC: if there are unmatched that appear in school_infrastructure but not master then put in description column, likewise for those in the master but not in infrastructure
 
+    -- QC: Step 5 - Unique in infrastructure
+    INSERT INTO quality_checks.qc_log (check_name, result_value)
+    SELECT 'unique_schools_infrastructure', COUNT(DISTINCT schoolregnumber)::TEXT
+    FROM public.bemis_school_infrastructure;
+
+    -- QC: Step 5 - Matched between combined and infrastructure
+    INSERT INTO quality_checks.qc_log (check_name, result_value)
+    SELECT 'matched_combined_infrastructure', COUNT(DISTINCT bscv.schoolregnumber)::TEXT
+    FROM visualization.bemis_school_comb_vis bscv
+    JOIN public.bemis_school_infrastructure bsi ON bscv.schoolregnumber = bsi.schoolregnumber;
+
+    -- QC: Step 5 - In infrastructure but not in combined
+    INSERT INTO quality_checks.qc_log (check_name, result_value, details)
+    SELECT 'infra_not_in_combined', COUNT(*), STRING_AGG(unmatched.schoolregnumber, ', ')
+    FROM (
+        SELECT bsi.schoolregnumber
+        FROM public.bemis_school_infrastructure bsi
+        LEFT JOIN visualization.bemis_school_comb_vis bscv ON bsi.schoolregnumber = bscv.schoolregnumber
+        WHERE bscv.schoolregnumber IS NULL
+    ) unmatched;
+
+    -- QC: Step 5 - In combined but not in infrastructure
+    INSERT INTO quality_checks.qc_log (check_name, result_value, details)
+    SELECT 'combined_not_in_infra', COUNT(*), STRING_AGG(unmatched.schoolregnumber, ', ')
+    FROM (
+        SELECT bscv.schoolregnumber
+        FROM visualization.bemis_school_comb_vis bscv
+        LEFT JOIN public.bemis_school_infrastructure bsi ON bscv.schoolregnumber = bsi.schoolregnumber
+        WHERE bsi.schoolregnumber IS NULL
+    ) unmatched;
+
     --------------------------------------------------------------------------
     -- Step 6: Derive Additional Visualization Variables
     -- 6a: Update school_category based on registration number prefix
@@ -221,7 +306,14 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
           ELSE ''Unknown''
        END
     ';
-    -- QC: output the count of primary, secondary and unknown categories of school (3 columns/rows depending on format of table)
+    -- QC: Step 6a - Count by school category
+    INSERT INTO quality_checks.qc_log (check_name, result_value, details)
+    SELECT 'school_category_counts', NULL, STRING_AGG(school_category || ':' || count, ', ')
+    FROM (
+        SELECT school_category, COUNT(*) AS count
+        FROM visualization.bemis_school_comb_vis
+        GROUP BY school_category
+    ) t;
 
     --------------------------------------------------------------------------
     -- 6b: Categorize improved_water_source based on text patterns in watersource
@@ -247,7 +339,12 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
 
             ELSE NULL
           END';
-  -- QC: output the count of NULL values for watersource if NULL is not == 0 
+ 
+  -- QC: Step 6b - Count NULL watersource
+  INSERT INTO quality_checks.qc_log (check_name, result_value)
+  SELECT 'null_watersource_count', COUNT(*)::TEXT
+  FROM visualization.bemis_school_comb_vis
+  WHERE watersource IS NULL;
 
     --------------------------------------------------------------------------
     -- 6c: Set improved_toilet_type based on infrastructure flags
@@ -268,7 +365,11 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
        OR toilettypeopenpitlatrine = TRUE  
        OR toilettypeothers = TRUE
     ';
-  -- QC: output the count of NULL values for improved_toilet_type if there are any (this would mean a toilet type has been added that  isn't in the list)
+  -- QC: Step 6c - Count NULL improved_toilet_type
+  INSERT INTO quality_checks.qc_log (check_name, result_value)
+  SELECT 'null_improved_toilet_type', COUNT(*)::TEXT
+  FROM visualization.bemis_school_comb_vis
+  WHERE improved_toilet_type IS NULL;
 
     --------------------------------------------------------------------------
     -- Step 7: Final Adjustments – Set Defaults for Latrine Fields
@@ -300,7 +401,10 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
     FROM public.bemis_school_enrollment AS e
     WHERE sch.schoolregnumber = e.schoolregnumber
     ';
-    -- QC: output a column/row for total number of each (boys, girls, total) and flag if boys+girls is not equal to total
+    -- QC: Step 8 - Totals for boys/girls/total
+    INSERT INTO quality_checks.qc_log (check_name, result_value, details)
+    SELECT 'enrollment_totals', NULL, 'boys:' || COALESCE(SUM(boy_pupils),0) || ', girls:' || COALESCE(SUM(girl_pupils),0) || ', total:' || COALESCE(SUM(total_pupils),0)
+    FROM visualization.bemis_school_comb_vis;
 
     --------------------------------------------------------------------------
     -- Step 9: Update Columns for Drop Hole Ratios and Related Flags
@@ -327,7 +431,10 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
           ELSE FALSE 
       END
     ';
-    -- QC: (more of a reference check) output the summary statistics of number of schools with over 1500 and number of schools with under 1500 (just for reference)
+    -- QC: Step 9 - Over/under 1500 pupils
+    INSERT INTO quality_checks.qc_log (check_name, result_value, details)
+    SELECT 'enrollment_over_under_1500', NULL, 'over_1500:' || SUM(CASE WHEN total_pupils >= 1500 THEN 1 ELSE 0 END) || ', under_1500:' || SUM(CASE WHEN total_pupils < 1500 THEN 1 ELSE 0 END)
+    FROM visualization.bemis_school_comb_vis;
 
     EXECUTE '
     UPDATE visualization.bemis_school_comb_vis 
@@ -341,7 +448,11 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
           ELSE FALSE 
        END
     ';
-  -- QC: (more of a reference check) output the count of number of schools meeting drophole ratio 
+  -- QC: Step 9 - Count meeting drophole ratio
+  INSERT INTO quality_checks.qc_log (check_name, result_value)
+  SELECT 'meet_drophole_ratio_count', COUNT(*)::TEXT
+  FROM visualization.bemis_school_comb_vis
+  WHERE meet_drophole_ratio = TRUE;
 
     --------------------------------------------------------------------------
     -- Step 10: Update Column for Separate Latrines for Teachers (if not exists)
@@ -355,8 +466,12 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
        END
     ';
 
-    -- QC: (more of a reference check) output the count of number of schools with separate latrines for teachers. 
-    -- QC: (These summary stats help to quickly identify any reason for out of bounds values under step 10)
+    -- QC: Step 10 - Count with separate latrines for teachers
+    INSERT INTO quality_checks.qc_log (check_name, result_value)
+    SELECT 'separate_latrines_teachers_count', COUNT(*)::TEXT
+    FROM visualization.bemis_school_comb_vis
+    WHERE separate_latrines_teachers = TRUE;
+
     --------------------------------------------------------------------------
     -- Step 10: Update column for improved sanitation
     --------------------------------------------------------------------------
@@ -376,6 +491,19 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
         ELSE 0 
       END
       ';
-    -- QC: (more of a reference check) output the average percentage of improved school sanitation across all schools. 
+    -- QC: Step 10 - Percent improved sanitation
+    INSERT INTO quality_checks.qc_log (check_name, result_value)
+    SELECT 'percent_improved_sanitation',
+        (100.0 * SUM(CASE WHEN improved_sanitation_school = 1 THEN 1 ELSE 0 END) / NULLIF(COUNT(*),0))::TEXT
+    FROM visualization.bemis_school_comb_vis;
+
+    -- QC: Step 8 - Mismatches
+    INSERT INTO quality_checks.qc_log (check_name, result_value, details)
+    SELECT 'enrollment_mismatches', COUNT(*), STRING_AGG(unmatched.schoolregnumber, ', ')
+    FROM (
+        SELECT schoolregnumber
+        FROM visualization.bemis_school_comb_vis
+        WHERE boy_pupils + girl_pupils != total_pupils
+    ) unmatched;
 END;
 $$;

@@ -14,7 +14,7 @@
 --   4. process_ruwasa_wp_report
 --      - Produces: visualization.ruwasa_wp_report_vis, ru_wasa_wps_district, ru_wasa_wps_district_quarterly
 --   5. process_ruwasa_district_infracoverage
---      - Produces: visualization.ruwasa_district_infracoverage (district coverage)
+--      - Produces: visualization.ruwasa_district_infracoverage (most recent, for cross-cutting charts), visualization.ruwasa_district_infracoverage_yearly (yearly averages, for big number/evolution charts)
 --   6. process_nsmis_data
 --      - Produces: visualization.nsmis_household_sanitation_reports_vis, nsmis_household_sanitation_lga, dmv_data_quality_flags
 --   7. process_gps_point_data
@@ -103,11 +103,11 @@ BEGIN
     CALL public.process_ruwasa_wp_report();
 
     --------------------------------------------------------------------------
-    -- STEP 5: Build RUWASA District Infracoverage Table
+    -- STEP 5: Build RUWASA District Infracoverage Tables
     --
     -- Dependency: foreign_schema_ruwasa_rsdms.ruwasa_reports_coverage, visualization.region_district_lga_names
-    -- Output: visualization.ruwasa_district_infracoverage
-    -- Why: Used for district-level coverage reporting.
+    -- Output: visualization.ruwasa_district_infracoverage (most recent, for cross-cutting charts), visualization.ruwasa_district_infracoverage_yearly (yearly averages, for big number/evolution charts)
+    -- Why: Used for district-level coverage reporting, both for most recent and historical/evolution analysis.
     --------------------------------------------------------------------------
     PERFORM 1 FROM information_schema.tables WHERE table_schema = 'foreign_schema_ruwasa_rsdms' AND table_name = 'ruwasa_reports_coverage';
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: foreign_schema_ruwasa_rsdms.ruwasa_reports_coverage'; END IF;
@@ -132,23 +132,9 @@ BEGIN
     IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: visualization.ruwasa_lgas_with_geojson'; END IF;
     CALL public.process_nsmis_data();
 
-    --------------------------------------------------------------------------
-    -- STEP 7: Build Water Point Report with Locations
-    --
-    -- Dependency: visualization.ruwasa_wp_report_vis, visualization.region_district_lga_names, foreign_schema_ruwasa_rsdms.ruwasa_villages
-    -- Output: visualization.water_point_report_with_locations
-    -- Why: Provides spatially joined water point data for mapping and reporting.
-    --------------------------------------------------------------------------
-    PERFORM 1 FROM information_schema.tables WHERE table_schema = 'visualization' AND table_name = 'ruwasa_wp_report_vis';
-    IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: visualization.ruwasa_wp_report_vis'; END IF;
-    PERFORM 1 FROM information_schema.tables WHERE table_schema = 'visualization' AND table_name = 'region_district_lga_names';
-    IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: visualization.region_district_lga_names'; END IF;
-    PERFORM 1 FROM information_schema.tables WHERE table_schema = 'foreign_schema_ruwasa_rsdms' AND table_name = 'ruwasa_villages';
-    IF NOT FOUND THEN RAISE EXCEPTION 'Missing dependency: foreign_schema_ruwasa_rsdms.ruwasa_villages'; END IF;
-    CALL public.process_gps_point_data();
 
     --------------------------------------------------------------------------
-    -- STEP 8: Build Cross-Cutting WASH Visualization Tables
+    -- STEP 7: Build Cross-Cutting WASH Visualization Tables
     --
     -- Dependency: foreign_schema_ruwasa_rsdms.ruwasa_villages, visualization.ruwasa_lgas_with_geojson, visualization.nsmis_household_sanitation_reports_vis, visualization.ruwasa_wps_district, public.ruwasa_districts
     -- Output: visualization.cross_cutting_wash_data_vis, ruwasa_service_level_lga, nsmis_household_sanitation_reports_lga
