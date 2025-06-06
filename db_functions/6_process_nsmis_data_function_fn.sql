@@ -309,6 +309,7 @@ BEGIN
       RAISE;
     END;
    
+   -- TODO: remove this
     -- for the sake of visualization, we are dropping the observations where the values are null because otherwise it won't generate the bars
     DELETE FROM visualization.nsmis_household_sanitation_lga
     WHERE 
