@@ -87,6 +87,7 @@ BEGIN
     ';
     
     -- QC: The below is a soft quality check that ultimately wants to be more of an output with summary statistics each time this script is run. Not necessarily an error
+    DROP TABLE IF EXISTS quality_checks.temp_functionality_summary;
          CREATE TABLE quality_checks.temp_functionality_summary AS
             SELECT 
                 functionalitystatus, 

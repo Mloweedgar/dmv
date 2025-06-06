@@ -109,7 +109,6 @@ BEGIN
         menstrualcounselor BOOLEAN,
         capitationgrant NUMERIC,
         signedsitebook BOOLEAN,
-        reportdate DATE,
         completioncertificate BOOLEAN
     )';
   
@@ -130,7 +129,6 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
                     menstrualcounselor,
                     capitationgrant,
                     signedsitebook,
-                    reportdate,
                     completioncertificate)
       SELECT
                     schoolregnumber,
@@ -144,7 +142,6 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
                     menstrualcounselor,
                     capitationgrant,
                     signedsitebook,
-                    reportdate,
                     completioncertificate
       FROM public.bemis_school_services
       WHERE EXTRACT(YEAR FROM bemis_school_services.reportdate) = 2024;
@@ -318,7 +315,7 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
     --------------------------------------------------------------------------
     -- 6b: Categorize improved_water_source based on text patterns in watersource
     --------------------------------------------------------------------------
-    EXECUTE '
+    
     UPDATE visualization.bemis_school_comb_vis
           SET improved_water_source = CASE 
             WHEN watersource ILIKE ANY (ARRAY[
@@ -338,7 +335,7 @@ INSERT INTO visualization.bemis_school_comb_vis(schoolregnumber,
             ]) THEN 0
 
             ELSE NULL
-          END';
+          END;
  
   -- QC: Step 6b - Count NULL watersource
   INSERT INTO quality_checks.qc_log (check_name, result_value)
